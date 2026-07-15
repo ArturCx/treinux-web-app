@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Auth (Better Auth) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  fichas        Ficha[]
+  workoutLogs   WorkoutLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ---------- Treinux ----------
+
+// Exercício importado do ExerciseDB (catálogo local)
+model Exercise {
+  id               String   @id // exerciseId do ExerciseDB (ex: exr_41n2ha5iPFpN3hEJ)
+  name             String
+  exerciseType     String? // STRENGTH, CARDIO, ...
+  bodyParts        String[]
+  equipments       String[]
+  targetMuscles    String[]
+  secondaryMuscles String[]
+  keywords         String[]
+  overview         String?
+  instructions     String[]
+  exerciseTips     String[]
+  variations       String[]
+  imageUrl         String?
+  videoUrl         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  fichaItems       FichaExercise[]
+
+  @@index([name])
+  @@map("exercise")
+}
+
+// Ficha de treino (ex: "Treino A - Puxar", "Full Body Calistenia")
+model Ficha {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  notes     String?
+  archived  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  exercises FichaExercise[]
+  logs      WorkoutLog[]
+
+  @@index([userId])
+  @@map("ficha")
+}
+
+// Exercício dentro de uma ficha, com prescrição
+model FichaExercise {
+  id          String   @id @default(cuid())
+  fichaId     String
+  ficha       Ficha    @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id])
+  order       Int
+  sets        Int      @default(3)
+  reps        String   @default("8-12") // string p/ suportar "8-12", "AMRAP", "30s"
+  restSeconds Int?
+  notes       String?
+
+  @@index([fichaId])
+  @@map("ficha_exercise")
+}
+
+// Registro de treino realizado
+model WorkoutLog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fichaId     String?
+  ficha       Ficha?    @relation(fields: [fichaId], references: [id], onDelete: SetNull)
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  notes       String?
+  entries     WorkoutLogEntry[]
+
+  @@index([userId, startedAt])
+  @@map("workout_log")
+}
+
+// Série realizada em um treino
+model WorkoutLogEntry {
+  id         String     @id @default(cuid())
+  logId      String
+  log        WorkoutLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  exerciseId String
+  setNumber  Int
+  reps       Int?
+  weightKg   Decimal?   @db.Decimal(6, 2)
+  durationS  Int? // p/ isometrias (prancha, etc.)
+  notes      String?
+
+  @@index([logId])
+  @@map("workout_log_entry")
+}
