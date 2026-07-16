@@ -72,27 +72,29 @@ model Verification {
 
 // ---------- Treinux ----------
 
-// Exercício importado do ExerciseDB (catálogo local)
+// Exercício do catálogo local (dataset hasaneyldrm/exercises-dataset, MIT).
+// Mídia © Gym visual (https://gymvisual.com/) — atribuição obrigatória na UI,
+// servida localmente a 180x180 conforme os termos do dataset.
 model Exercise {
-  id               String   @id // exerciseId do ExerciseDB (ex: exr_41n2ha5iPFpN3hEJ)
+  id               String   @id // id do dataset, ex: "0001"
   name             String
-  exerciseType     String? // STRENGTH, CARDIO, ...
-  bodyParts        String[]
-  equipments       String[]
-  targetMuscles    String[]
+  category         String
+  bodyPart         String // waist, back, chest, upper arms, upper legs, ...
+  equipment        String // body weight, dumbbell, kettlebell, ... (28 valores)
+  target           String // músculo primário: abs, lats, pectorals, ...
+  muscleGroup      String?
   secondaryMuscles String[]
-  keywords         String[]
-  overview         String?
-  instructions     String[]
-  exerciseTips     String[]
-  variations       String[]
-  imageUrl         String?
-  videoUrl         String?
+  instructions     String[] // passos em inglês (o dataset não tem pt)
+  imageUrl         String // /exercicios/0001-xxx.jpg (public/)
+  gifUrl           String? // animação; só baixamos sob demanda
+  attribution      String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   fichaItems       FichaExercise[]
 
   @@index([name])
+  @@index([bodyPart])
+  @@index([equipment])
   @@map("exercise")
 }
 

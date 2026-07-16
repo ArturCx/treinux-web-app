@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
-import { ErrorBanner, Field, SubmitButton } from "../ui";
+import { ErrorBanner, Field, SubmitButton } from "@/components/form";
 
 export default function LoginPage() {
   const router = useRouter();
