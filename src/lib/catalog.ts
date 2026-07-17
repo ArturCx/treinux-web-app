@@ -156,5 +156,10 @@ export function titleCase(value: string) {
     .join(" ");
 }
 
+/** Só a inicial em maiúscula, preservando o resto (nomes de exercícios). */
+export function sentenceCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 /** Atribuição exigida pelos termos do dataset — precisa aparecer onde a mídia aparece. */
 export const MEDIA_ATTRIBUTION = "© Gym visual — gymvisual.com";

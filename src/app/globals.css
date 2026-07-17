@@ -3,6 +3,7 @@
 @theme {
   --color-paper: #f4f1ea;
   --color-paper-edge: #e3dfd4;
+  --color-paper-deep: #ece8de;
   --color-ink: #1c1b18;
   --color-ink-soft: #2e2c27;
   --color-muted: #77736a;
@@ -19,6 +20,7 @@
   --animate-spin-slow: spin 28s linear infinite;
   --animate-rise: rise 0.3s ease-out both;
   --animate-enter: enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 
   @keyframes marquee {
     to {
@@ -47,6 +49,27 @@
       transform: none;
     }
   }
+
+  /* feedback de estado (série concluída): leve overshoot, sem elástico */
+  @keyframes pop {
+    0% {
+      transform: scale(0.8);
+    }
+    60% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+/* Rolagem por gesto sem barra nativa (chips/abas no mobile). */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 body {
@@ -60,11 +83,13 @@ body {
   color: var(--color-paper);
 }
 
+/* Movimento reduzido: corta animações E transições (translate/scale de hover). */
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee,
-  .animate-spin-slow,
-  .animate-rise,
-  .animate-enter {
-    animation: none;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

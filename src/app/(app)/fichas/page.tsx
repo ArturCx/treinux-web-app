@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { fichaStats, splitFichaName } from "@/lib/ficha-stats";
+import { QuickDelete } from "./quick-delete";
 
 export default async function FichasPage() {
   const session = await requireSession();
@@ -28,7 +29,7 @@ export default async function FichasPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col">
       <div className="flex items-end justify-between gap-4">
         <h1 className="text-[30px] leading-none font-bold tracking-[-0.03em] lg:text-[38px]">
-          Suas fichas
+          Suas fichas<span className="text-ember">.</span>
         </h1>
         <div className="text-right">
           <div className="text-[44px] leading-[0.9] font-bold tracking-[-0.04em] text-ember tabular-nums lg:text-[56px]">
@@ -42,12 +43,25 @@ export default async function FichasPage() {
 
       <Link
         href="/fichas/nova"
-        className="group mt-6 flex h-15 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        className="group mt-6 flex h-15 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
       >
         <span>Nova ficha</span>
         <span
           aria-hidden="true"
           className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
+        >
+          →
+        </span>
+      </Link>
+
+      <Link
+        href="/fichas/gerar"
+        className="group mt-2.5 flex h-12 items-center justify-between border-2 border-ink px-5 text-[14px] font-bold transition-colors hover:bg-ink/5 active:bg-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+      >
+        <span>Gerar ficha automaticamente</span>
+        <span
+          aria-hidden="true"
+          className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
         >
           →
         </span>
@@ -93,11 +107,11 @@ function FichaList({
           <li key={ficha.id} className="relative overflow-hidden">
             <Link
               href={`/fichas/${ficha.id}`}
-              className="group relative block border-b border-paper-edge py-6 transition-colors hover:bg-[#efebe2] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+              className="group relative block border-b border-paper-edge py-6 transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
             >
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute -top-4 right-1 text-[96px] leading-none font-bold tracking-[-0.05em] text-[#ECE8DE] select-none tabular-nums"
+                className="pointer-events-none absolute -top-4 right-1 text-[96px] leading-none font-bold tracking-[-0.05em] text-paper-deep select-none tabular-nums"
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -147,6 +161,11 @@ function FichaList({
                 </span>
               </div>
             </Link>
+
+            {/* atalho de exclusão por cima do link da linha */}
+            <div className="absolute top-4 right-1 z-10">
+              <QuickDelete id={ficha.id} name={ficha.name} />
+            </div>
           </li>
         );
       })}
@@ -157,7 +176,7 @@ function FichaList({
 /** Primeira visita: cartaz tipográfico, não um card com texto de ajuda. */
 function FirstRun() {
   return (
-    <div className="-my-8 flex min-h-[calc(100dvh-129px)] flex-col justify-center lg:-my-12">
+    <div className="-my-8 flex min-h-[calc(100dvh-165px)] flex-col justify-center lg:-my-12 lg:min-h-[calc(100dvh-129px)]">
       <div className="mx-auto w-full max-w-3xl">
         <span
           aria-hidden="true"
@@ -171,7 +190,7 @@ function FirstRun() {
             Toda rotina séria começa com uma ficha.
           </h1>
           <p className="mt-3 max-w-lg text-[14.5px] leading-relaxed text-muted">
-            Monte seu plano com exercícios do catálogo — 1.324 movimentos com
+            Monte seu plano com exercícios do catálogo — +1.300 movimentos com
             foto, músculos-alvo e instruções passo a passo.
           </p>
         </div>
@@ -179,12 +198,24 @@ function FirstRun() {
         <div className="mt-8 max-w-md">
           <Link
             href="/fichas/nova"
-            className="group flex h-15 items-center justify-between bg-ink px-5 text-[16px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="group flex h-15 items-center justify-between bg-ink px-5 text-[16px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             <span>Criar primeira ficha</span>
             <span
               aria-hidden="true"
               className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
+            >
+              →
+            </span>
+          </Link>
+          <Link
+            href="/fichas/gerar"
+            className="group mt-2.5 flex h-12 items-center justify-between border-2 border-ink px-5 text-[14px] font-bold transition-colors hover:bg-ink/5 active:bg-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          >
+            <span>Gerar ficha automaticamente</span>
+            <span
+              aria-hidden="true"
+              className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
             >
               →
             </span>

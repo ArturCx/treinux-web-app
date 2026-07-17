@@ -35,9 +35,31 @@ async function main() {
   const items: Raw[] = JSON.parse(readFileSync(path, "utf-8"));
   console.log(`Lendo ${items.length} exercícios do dataset local...`);
 
+  // Nomes em pt-BR traduzidos via LLM (id -> nome). Opcional: se o arquivo
+  // não existir, o catálogo fica só em inglês.
+  let namesPt: Record<string, string> = {};
+  try {
+    const ptPath = join(process.cwd(), "prisma", "data", "names-pt.json");
+    namesPt = JSON.parse(readFileSync(ptPath, "utf-8"));
+    console.log(`  ${Object.keys(namesPt).length} nomes em pt-BR carregados.`);
+  } catch {
+    console.log("  names-pt.json não encontrado — mantendo nomes em inglês.");
+  }
+
+  // Passos de execução em pt-BR traduzidos via LLM (id -> string[]). Opcional.
+  let stepsPt: Record<string, string[]> = {};
+  try {
+    const stPath = join(process.cwd(), "prisma", "data", "steps-pt.json");
+    stepsPt = JSON.parse(readFileSync(stPath, "utf-8"));
+    console.log(`  ${Object.keys(stepsPt).length} conjuntos de passos pt-BR carregados.`);
+  } catch {
+    console.log("  steps-pt.json não encontrado — mantendo instruções em inglês.");
+  }
+
   const rows = items.map((e) => ({
     id: e.id,
     name: e.name.trim(),
+    namePt: namesPt[e.id] ?? null,
     category: e.category,
     bodyPart: e.body_part,
     equipment: e.equipment,
@@ -45,11 +67,12 @@ async function main() {
     muscleGroup: e.muscle_group || null,
     secondaryMuscles: e.secondary_muscles ?? [],
     instructions: e.instruction_steps?.en ?? [],
+    instructionsPt: stepsPt[e.id] ?? [],
     // mídia copiada para public/ mantendo o nome do arquivo do dataset
     imageUrl: `/exercicios/${e.image.split("/").pop()}`,
     // GIF do dataset convertido para WebP animado (scripts/gif-to-webp.mjs)
     gifUrl: e.gif_url
-      ? `/exercicios-anim/${e.gif_url.split("/").pop().replace(/\.gif$/, ".webp")}`
+      ? `/exercicios-anim/${e.gif_url.split("/").pop()!.replace(/\.gif$/, ".webp")}`
       : null,
     attribution: e.attribution,
   }));

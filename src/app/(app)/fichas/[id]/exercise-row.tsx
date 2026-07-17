@@ -8,6 +8,7 @@ import {
   EQUIPMENT_LABELS,
   TARGET_LABELS,
   label,
+  sentenceCase,
 } from "@/lib/catalog";
 import { initials } from "@/lib/ficha-stats";
 import { moveExercise, removeExercise, updatePrescription } from "../actions";
@@ -17,11 +18,13 @@ export type RowItem = {
   order: number;
   sets: number;
   reps: string;
+  weightKg: number | null;
   restSeconds: number | null;
   notes: string | null;
   exercise: {
     id: string;
     name: string;
+    namePt: string | null;
     imageUrl: string | null;
     bodyPart: string;
     equipment: string;
@@ -43,6 +46,8 @@ export function ExerciseRow({
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(updatePrescription, null);
 
+  const displayName = sentenceCase(item.exercise.namePt ?? item.exercise.name);
+
   const taxonomy = [
     label(BODY_PART_LABELS, item.exercise.bodyPart),
     label(TARGET_LABELS, item.exercise.target),
@@ -56,7 +61,7 @@ export function ExerciseRow({
       {/* numeral de impresso: sangra atrás do conteúdo, decorativo */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -top-3.5 right-3.5 z-0 text-[96px] leading-none font-bold tracking-[-0.05em] text-[#ECE8DE] select-none tabular-nums lg:right-6"
+        className="pointer-events-none absolute -top-3.5 right-3.5 z-0 text-[96px] leading-none font-bold tracking-[-0.05em] text-paper-deep select-none tabular-nums lg:right-6"
       >
         {String(index + 1).padStart(2, "0")}
       </span>
@@ -73,7 +78,7 @@ export function ExerciseRow({
             />
           ) : (
             <span className="flex size-14 shrink-0 items-center justify-center bg-paper-edge text-[15px] font-bold text-muted">
-              {initials(item.exercise.name)}
+              {initials(displayName)}
             </span>
           )}
 
@@ -83,7 +88,7 @@ export function ExerciseRow({
                 href={`/exercicios/${item.exercise.id}`}
                 className="hover:underline hover:decoration-ember hover:underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
               >
-                {item.exercise.name}
+                {displayName}
               </Link>
             </h3>
             <p className="mt-1 text-[12.5px] text-muted">{taxonomy}</p>
@@ -111,6 +116,11 @@ export function ExerciseRow({
           <span className="text-[30px] leading-none font-bold tracking-[-0.03em] tabular-nums">
             {item.sets} <span className="text-ember">×</span> {item.reps}
           </span>
+          {item.weightKg !== null && (
+            <span className="text-[15px] font-bold text-ember tabular-nums">
+              {formatWeight(item.weightKg)}
+            </span>
+          )}
           {item.restSeconds !== null && (
             <span className="text-[12.5px] font-medium text-muted">
               {formatRest(item.restSeconds)} descanso
@@ -136,7 +146,7 @@ export function ExerciseRow({
       {open && (
         <form
           action={action}
-          className="animate-rise relative z-1 flex flex-col gap-4 border-t border-dashed border-paper-edge bg-[#ECE8DE] px-5 py-5 lg:px-8"
+          className="animate-rise relative z-1 flex flex-col gap-4 border-t border-dashed border-paper-edge bg-paper-deep px-5 py-5 lg:px-8"
         >
           <input type="hidden" name="itemId" value={item.id} />
 
@@ -173,6 +183,17 @@ export function ExerciseRow({
               className="w-32"
             />
             <CompactField
+              id={`weight-${item.id}`}
+              name="weightKg"
+              label="PESO (KG)"
+              type="text"
+              inputMode="decimal"
+              maxLength={8}
+              defaultValue={item.weightKg ?? ""}
+              placeholder="—"
+              className="w-24"
+            />
+            <CompactField
               id={`rest-${item.id}`}
               name="restSeconds"
               label="DESCANSO (S)"
@@ -199,7 +220,7 @@ export function ExerciseRow({
             <button
               type="submit"
               disabled={pending}
-              className="flex h-11 cursor-pointer items-center gap-2.5 bg-ink px-5 text-[13.5px] font-bold text-paper transition-colors hover:bg-ink-soft disabled:cursor-default disabled:bg-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+              className="flex h-11 cursor-pointer items-center gap-2.5 bg-ink px-5 text-[13.5px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft disabled:cursor-default disabled:bg-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
               {pending && (
                 <span
@@ -209,7 +230,7 @@ export function ExerciseRow({
               )}
               {pending ? "Salvando…" : "Salvar"}
             </button>
-            <RemoveButton itemId={item.id} name={item.exercise.name} />
+            <RemoveButton itemId={item.id} name={displayName} />
           </div>
         </form>
       )}
@@ -305,4 +326,9 @@ function formatRest(seconds: number) {
   return seconds >= 60 && seconds % 60 === 0
     ? `${seconds / 60}min`
     : `${seconds}s`;
+}
+
+function formatWeight(kg: number) {
+  // vírgula decimal (pt-BR), sem casas desnecessárias: 22,5 kg · 10 kg
+  return `${kg.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kg`;
 }

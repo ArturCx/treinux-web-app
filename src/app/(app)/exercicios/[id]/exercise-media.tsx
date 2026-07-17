@@ -59,7 +59,7 @@ export function ExerciseMedia({
           type="button"
           onClick={() => setPlaying((v) => !v)}
           aria-pressed={playing}
-          className="group flex h-12 cursor-pointer items-center justify-between border-2 border-ink px-4 text-[14px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          className="group flex h-12 cursor-pointer items-center justify-between border-2 border-ink px-4 text-[14px] font-bold transition-colors hover:bg-ink hover:text-paper active:bg-ink active:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
         >
           <span>{playing ? "Ver posição" : "Ver movimento"}</span>
           <span

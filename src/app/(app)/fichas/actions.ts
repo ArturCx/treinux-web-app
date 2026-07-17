@@ -102,6 +102,12 @@ export async function toggleArchive(formData: FormData) {
   revalidatePath(`/fichas/${id}`);
 }
 
+/** Lê `sets` do form; fora de 1–20 (ou ausente) cai no padrão do schema (3). */
+function parseSets(formData: FormData) {
+  const sets = Number(formData.get("sets"));
+  return Number.isInteger(sets) && sets >= 1 && sets <= 20 ? sets : 3;
+}
+
 export async function addExercise(formData: FormData) {
   const session = await requireSession();
   const fichaId = String(formData.get("fichaId") ?? "");
@@ -126,6 +132,7 @@ export async function addExercise(formData: FormData) {
       fichaId,
       exerciseId,
       order: (last?.order ?? 0) + 1,
+      sets: parseSets(formData),
     },
   });
 
@@ -162,7 +169,12 @@ export async function addExerciseToFicha(formData: FormData) {
       select: { order: true },
     });
     await prisma.fichaExercise.create({
-      data: { fichaId, exerciseId, order: (last?.order ?? 0) + 1 },
+      data: {
+        fichaId,
+        exerciseId,
+        order: (last?.order ?? 0) + 1,
+        sets: parseSets(formData),
+      },
     });
   }
 
@@ -202,6 +214,7 @@ export async function updatePrescription(
 
   const sets = Number(formData.get("sets"));
   const reps = String(formData.get("reps") ?? "").trim();
+  const weightRaw = String(formData.get("weightKg") ?? "").trim().replace(",", ".");
   const restRaw = String(formData.get("restSeconds") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -210,13 +223,17 @@ export async function updatePrescription(
   if (!reps) return { error: "Informe as repetições (ex.: 8-12, AMRAP, 30s)." };
   if (reps.length > 20) return { error: "Repetições: máximo de 20 caracteres." };
 
+  const weightKg = weightRaw ? Number(weightRaw) : null;
+  if (weightKg !== null && (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 9999))
+    return { error: "Peso deve ser um número entre 0 e 9999 kg." };
+
   const restSeconds = restRaw ? Number(restRaw) : null;
   if (restSeconds !== null && (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 900))
     return { error: "Descanso deve ser entre 0 e 900 segundos." };
 
   await prisma.fichaExercise.update({
     where: { id: itemId },
-    data: { sets, reps, restSeconds, notes: notes || null },
+    data: { sets, reps, weightKg, restSeconds, notes: notes || null },
   });
 
   revalidatePath(`/fichas/${item.fichaId}`);

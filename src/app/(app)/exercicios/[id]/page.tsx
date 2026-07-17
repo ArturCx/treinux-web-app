@@ -8,6 +8,7 @@ import {
   TARGET_LABELS,
   label,
   muscleLabel,
+  sentenceCase,
 } from "@/lib/catalog";
 import { ExerciseMedia } from "./exercise-media";
 import { AddToFicha } from "./add-to-ficha";
@@ -35,6 +36,13 @@ export default async function ExercicioPage({
 
   if (!exercise) notFound();
 
+  // Passos em pt-BR quando disponíveis; senão cai para o inglês do dataset.
+  const instructions =
+    exercise.instructionsPt.length > 0
+      ? exercise.instructionsPt
+      : exercise.instructions;
+  const instructionsInEnglish = exercise.instructionsPt.length === 0;
+
   const fichaOptions = fichas.map((f) => ({
     id: f.id,
     name: f.name,
@@ -54,7 +62,7 @@ export default async function ExercicioPage({
         {/* coluna esquerda: mídia + ação */}
         <div className="flex flex-col gap-5">
           <ExerciseMedia
-            name={exercise.name}
+            name={exercise.namePt ?? exercise.name}
             imageUrl={exercise.imageUrl}
             gifUrl={exercise.gifUrl}
           />
@@ -97,13 +105,13 @@ export default async function ExercicioPage({
             </div>
           )}
 
-          {exercise.instructions.length > 0 && (
+          {instructions.length > 0 && (
             <section className="mt-8">
               <h2 className="border-b-2 border-ink pb-2 text-[11px] font-medium tracking-[0.14em] text-muted">
                 EXECUÇÃO
               </h2>
               <ol className="mt-1">
-                {exercise.instructions.map((step, i) => (
+                {instructions.map((step, i) => (
                   <li
                     key={i}
                     className="flex gap-4 border-b border-paper-edge py-4 last:border-b-0"
@@ -118,9 +126,11 @@ export default async function ExercicioPage({
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 text-[12px] text-clay">
-                Instruções em inglês, como no catálogo original.
-              </p>
+              {instructionsInEnglish && (
+                <p className="mt-4 text-[12px] text-clay">
+                  Instruções em inglês, como no catálogo original.
+                </p>
+              )}
             </section>
           )}
         </div>
@@ -132,7 +142,12 @@ export default async function ExercicioPage({
 function Header({
   exercise,
 }: {
-  exercise: { name: string; category: string; muscleGroup: string | null };
+  exercise: {
+    name: string;
+    namePt: string | null;
+    category: string;
+    muscleGroup: string | null;
+  };
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -141,9 +156,14 @@ function Header({
         {exercise.muscleGroup && ` · ${muscleLabel(exercise.muscleGroup)}`}
       </span>
       <h1 className="text-[32px] leading-[1.02] font-bold tracking-[-0.03em] lg:text-[44px] lg:tracking-[-0.04em]">
-        {exercise.name}
+        {sentenceCase(exercise.namePt ?? exercise.name)}
         <span className="text-ember">.</span>
       </h1>
+      {exercise.namePt && (
+        <p className="text-[13px] text-muted italic">
+          {sentenceCase(exercise.name)}
+        </p>
+      )}
     </div>
   );
 }

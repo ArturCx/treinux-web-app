@@ -78,6 +78,7 @@ model Verification {
 model Exercise {
   id               String   @id // id do dataset, ex: "0001"
   name             String
+  namePt           String? // nome em pt-BR (traduzido via LLM); UI prefere este
   category         String
   bodyPart         String // waist, back, chest, upper arms, upper legs, ...
   equipment        String // body weight, dumbbell, kettlebell, ... (28 valores)
@@ -85,6 +86,7 @@ model Exercise {
   muscleGroup      String?
   secondaryMuscles String[]
   instructions     String[] // passos em inglês (o dataset não tem pt)
+  instructionsPt   String[] @default([]) // passos traduzidos p/ pt-BR via LLM; UI prefere estes
   imageUrl         String // /exercicios/0001-xxx.jpg (public/)
   gifUrl           String? // animação; só baixamos sob demanda
   attribution      String
@@ -93,6 +95,7 @@ model Exercise {
   fichaItems       FichaExercise[]
 
   @@index([name])
+  @@index([namePt])
   @@index([bodyPart])
   @@index([equipment])
   @@map("exercise")
@@ -125,6 +128,7 @@ model FichaExercise {
   order       Int
   sets        Int      @default(3)
   reps        String   @default("8-12") // string p/ suportar "8-12", "AMRAP", "30s"
+  weightKg    Decimal? @db.Decimal(6, 2) // peso alvo; null p/ peso corporal/calistenia
   restSeconds Int?
   notes       String?
 
@@ -160,6 +164,7 @@ model WorkoutLogEntry {
   durationS  Int? // p/ isometrias (prancha, etc.)
   notes      String?
 
+  @@unique([logId, exerciseId, setNumber]) // 1 registro por série (upsert)
   @@index([logId])
   @@map("workout_log_entry")
 }

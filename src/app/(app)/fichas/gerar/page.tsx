@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { NewFichaForm } from "./form";
+import { GeneratorForm } from "./form";
 
-export default function NovaFichaPage() {
+export default function GerarFichaPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
       <div className="flex flex-col gap-4">
@@ -13,14 +13,15 @@ export default function NovaFichaPage() {
         </Link>
         <div className="flex flex-col gap-2">
           <h1 className="text-[34px] leading-[1.05] font-bold tracking-[-0.03em]">
-            Nova ficha<span className="text-ember">.</span>
+            Gerar ficha<span className="text-ember">.</span>
           </h1>
           <p className="text-[14.5px] text-muted">
-            Dê um nome ao treino. Os exercícios vêm no próximo passo.
+            Escolha a modalidade, os grupos e a duração — o Treinux monta as
+            fichas com exercícios do catálogo. Tudo editável depois.
           </p>
         </div>
       </div>
-      <NewFichaForm />
+      <GeneratorForm />
     </div>
   );
 }

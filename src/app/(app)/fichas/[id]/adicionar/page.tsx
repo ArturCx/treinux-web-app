@@ -54,9 +54,21 @@ export default async function AdicionarExercicioPage({
       </div>
 
       <p className="mt-4 text-[13px] text-muted">
-        {inFicha.size === 0
-          ? "Nenhum exercício escolhido ainda."
-          : `${inFicha.size} ${inFicha.size === 1 ? "exercício já escolhido" : "exercícios já escolhidos"} nesta ficha.`}
+        {inFicha.size === 0 ? (
+          <>
+            Toque num exercício para escolher as séries e adicionar à ficha.
+          </>
+        ) : (
+          <>
+            <span className="font-bold text-ember tabular-nums">
+              {inFicha.size}
+            </span>{" "}
+            {inFicha.size === 1
+              ? "exercício nesta ficha"
+              : "exercícios nesta ficha"}{" "}
+            · toque num card para adicionar mais.
+          </>
+        )}
       </p>
 
       <div className="mt-5">

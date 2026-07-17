@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addExerciseToFicha } from "../../fichas/actions";
+import { SetsStepper } from "@/components/sets-stepper";
 
 type FichaOption = { id: string; name: string; hasExercise: boolean };
 
@@ -18,12 +19,13 @@ export function AddToFicha({
   fichas: FichaOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const [sets, setSets] = useState(3);
 
   if (fichas.length === 0) {
     return (
       <Link
         href="/fichas/nova"
-        className="group flex h-14 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        className="group flex h-14 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
       >
         <span>Criar ficha para adicionar</span>
         <span
@@ -52,12 +54,21 @@ export function AddToFicha({
       );
     }
     return (
-      <form action={addExerciseToFicha}>
+      <form action={addExerciseToFicha} className="flex flex-col gap-2.5">
         <input type="hidden" name="exerciseId" value={exerciseId} />
         <input type="hidden" name="fichaId" value={ficha.id} />
+        <input type="hidden" name="sets" value={sets} />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-medium tracking-[0.1em] text-muted">
+            SÉRIES
+          </span>
+          <div className="w-36">
+            <SetsStepper value={sets} onChange={setSets} />
+          </div>
+        </div>
         <button
           type="submit"
-          className="group flex h-14 w-full cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          className="group flex h-14 w-full cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
         >
           <span>Adicionar a {ficha.name}</span>
           <span
@@ -76,7 +87,7 @@ export function AddToFicha({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group flex h-14 cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        className="group flex h-14 cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
       >
         <span>Adicionar a uma ficha</span>
         <span
@@ -103,13 +114,21 @@ export function AddToFicha({
           Fechar
         </button>
       </div>
+      <div className="flex items-center justify-between gap-3 border-b border-paper-edge px-4 py-2.5">
+        <span className="text-[11px] font-medium tracking-[0.1em] text-muted">
+          SÉRIES
+        </span>
+        <div className="w-36">
+          <SetsStepper value={sets} onChange={setSets} />
+        </div>
+      </div>
       <ul>
         {fichas.map((ficha) => (
           <li key={ficha.id} className="border-b border-paper-edge last:border-b-0">
             {ficha.hasExercise ? (
               <Link
                 href={`/fichas/${ficha.id}`}
-                className="flex h-13 items-center justify-between px-4 text-[14.5px] text-muted transition-colors hover:bg-[#efebe2] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+                className="flex h-13 items-center justify-between px-4 text-[14.5px] text-muted transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
               >
                 <span>{ficha.name}</span>
                 <span className="text-[12.5px] font-bold text-ember">
@@ -120,9 +139,10 @@ export function AddToFicha({
               <form action={addExerciseToFicha}>
                 <input type="hidden" name="exerciseId" value={exerciseId} />
                 <input type="hidden" name="fichaId" value={ficha.id} />
+                <input type="hidden" name="sets" value={sets} />
                 <button
                   type="submit"
-                  className="group flex h-13 w-full cursor-pointer items-center justify-between px-4 text-left text-[14.5px] font-medium transition-colors hover:bg-[#efebe2] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+                  className="group flex h-13 w-full cursor-pointer items-center justify-between px-4 text-left text-[14.5px] font-medium transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
                 >
                   <span>{ficha.name}</span>
                   <span

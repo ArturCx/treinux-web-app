@@ -9,9 +9,10 @@ import {
   MEDIA_ATTRIBUTION,
   TARGET_LABELS,
   label,
+  sentenceCase,
 } from "@/lib/catalog";
 import { CatalogSearch } from "./catalog-search";
-import { addExercise } from "@/app/(app)/fichas/actions";
+import { AddExerciseCard } from "./add-exercise-card";
 
 const PAGE_SIZE = 24;
 
@@ -45,7 +46,11 @@ export async function ExerciseCatalog({
   const page = Math.max(1, Number(params.page) || 1);
 
   const where: Prisma.ExerciseWhereInput = {};
-  if (q) where.name = { contains: q, mode: "insensitive" };
+  if (q)
+    where.OR = [
+      { namePt: { contains: q, mode: "insensitive" } },
+      { name: { contains: q, mode: "insensitive" } },
+    ];
   if (grupo) where.bodyPart = grupo;
   if (equip) where.equipment = equip;
 
@@ -53,12 +58,13 @@ export async function ExerciseCatalog({
     prisma.exercise.count({ where }),
     prisma.exercise.findMany({
       where,
-      orderBy: { name: "asc" },
+      orderBy: [{ namePt: "asc" }, { name: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
         id: true,
         name: true,
+        namePt: true,
         imageUrl: true,
         bodyPart: true,
         target: true,
@@ -93,11 +99,11 @@ export async function ExerciseCatalog({
     <div className="flex flex-col">
       <div className="flex items-end justify-between gap-4">
         <h1 className="text-[30px] leading-none font-bold tracking-[-0.03em] lg:text-[38px]">
-          Catálogo
+          Catálogo<span className="text-ember">.</span>
         </h1>
         <div className="text-right">
           <div className="text-[44px] leading-[0.9] font-bold tracking-[-0.04em] text-ember tabular-nums lg:text-[56px]">
-            {total}
+            {hasFilters ? total : `+${Math.floor(total / 100) * 100}`}
           </div>
           <div className="text-[10.5px] font-medium tracking-[0.1em] text-muted">
             {hasFilters ? "RESULTADOS" : "EXERCÍCIOS"}
@@ -110,7 +116,7 @@ export async function ExerciseCatalog({
       </div>
 
       {/* músculo: chips sólidos, rolagem horizontal no mobile */}
-      <div className="-mx-6 mt-4 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
+      <div className="scrollbar-none -mx-6 mt-4 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
         <Chip href={buildHref({ grupo: "", page: "1" })} active={!grupo}>
           Todos
         </Chip>
@@ -126,7 +132,7 @@ export async function ExerciseCatalog({
       </div>
 
       {/* equipamento: abas sublinhadas — segunda dimensão, peso visual menor */}
-      <div className="-mx-6 mt-1.5 flex gap-4 overflow-x-auto border-b-2 border-ink px-6 pt-1.5 lg:mx-0 lg:px-0">
+      <div className="scrollbar-none -mx-6 mt-1.5 flex gap-4 overflow-x-auto border-b-2 border-ink px-6 pt-1.5 lg:mx-0 lg:px-0">
         <Tab href={buildHref({ equip: "", page: "1" })} active={!equip}>
           Todos
         </Tab>
@@ -165,60 +171,87 @@ export async function ExerciseCatalog({
             .
           </p>
           <p className="mt-2 text-[14px] text-muted">
-            O catálogo está em inglês — tente &ldquo;squat&rdquo;,
-            &ldquo;press&rdquo;, &ldquo;curl&rdquo;.
+            Tente outro termo — &ldquo;supino&rdquo;,
+            &ldquo;agachamento&rdquo;, &ldquo;rosca&rdquo; — ou limpe os
+            filtros.
           </p>
         </div>
       ) : (
         <ul className="mt-6 grid grid-cols-2 border-l border-paper-edge lg:grid-cols-4">
-          {exercises.map((exercise, i) => (
-            <li
-              key={exercise.id}
-              className="flex flex-col gap-2 border-r border-b border-paper-edge p-3.5"
-            >
-              <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
-                Nº {String(offset + i + 1).padStart(3, "0")}
-              </span>
+          {exercises.map((exercise, i) => {
+            const number = `Nº ${String(offset + i + 1).padStart(3, "0")}`;
+            const displayName = sentenceCase(exercise.namePt ?? exercise.name);
+            const taxonomy = `${label(BODY_PART_LABELS, exercise.bodyPart)} · ${label(TARGET_LABELS, exercise.target)}`;
+            const addable = fichaId && !inFicha.has(exercise.id);
 
-              <Link
-                href={`/exercicios/${exercise.id}`}
-                className="group flex flex-col gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            return (
+              <li
+                key={exercise.id}
+                className="border-r border-b border-paper-edge"
               >
-                <Image
-                  src={exercise.imageUrl}
-                  alt=""
-                  width={200}
-                  height={200}
-                  className="aspect-square w-full bg-paper-edge object-cover"
-                />
-                <h3 className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
-                  {exercise.name}
-                </h3>
-                <p className="text-[12px] text-muted">
-                  {label(BODY_PART_LABELS, exercise.bodyPart)} ·{" "}
-                  {label(TARGET_LABELS, exercise.target)}
-                </p>
-              </Link>
-
-              {fichaId &&
-                (inFicha.has(exercise.id) ? (
-                  <span className="mt-auto flex h-11 items-center text-[14px] font-bold text-ember">
-                    ✓ Já na ficha
-                  </span>
+                {addable ? (
+                  <div className="h-full p-3.5">
+                    <AddExerciseCard
+                      fichaId={fichaId}
+                      exerciseId={exercise.id}
+                      number={number}
+                      name={displayName}
+                      taxonomy={taxonomy}
+                      imageUrl={exercise.imageUrl}
+                    />
+                  </div>
                 ) : (
-                  <form action={addExercise} className="mt-auto">
-                    <input type="hidden" name="fichaId" value={fichaId} />
-                    <input type="hidden" name="exerciseId" value={exercise.id} />
-                    <button
-                      type="submit"
-                      className="h-11 w-full cursor-pointer bg-ink text-[14px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
-                    >
-                      Adicionar
-                    </button>
-                  </form>
-                ))}
-            </li>
-          ))}
+                  /* card inteiro é o link — o selecionado se destaca com
+                     fundo, zoom da foto e a seta deslizando */
+                  <Link
+                    href={`/exercicios/${exercise.id}`}
+                    className="group flex h-full flex-col gap-2 p-3.5 transition-colors duration-200 hover:bg-paper-deep active:bg-paper-deep focus-visible:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+                  >
+                    <span className="flex items-baseline justify-between">
+                      <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
+                        {number}
+                      </span>
+                      {fichaId ? (
+                        <span
+                          aria-hidden="true"
+                          className="text-[13px] leading-none font-bold text-ember"
+                        >
+                          ✓
+                        </span>
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="-translate-x-1 text-[18px] leading-none font-bold text-ember opacity-0 transition-all duration-200 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+                        >
+                          →
+                        </span>
+                      )}
+                    </span>
+
+                    <span className="overflow-hidden">
+                      <Image
+                        src={exercise.imageUrl}
+                        alt=""
+                        width={200}
+                        height={200}
+                        className="aspect-square w-full bg-paper-edge object-cover transition-transform duration-300 ease-out group-hover:scale-[1.05] group-focus-visible:scale-[1.05]"
+                      />
+                    </span>
+                    <h3 className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
+                      {displayName}
+                    </h3>
+                    <p className="text-[12px] text-muted">{taxonomy}</p>
+
+                    {fichaId && (
+                      <span className="mt-auto pt-1 text-[12.5px] font-bold text-ember">
+                        Já na ficha
+                      </span>
+                    )}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -269,7 +302,7 @@ function Chip({
       className={`flex h-11 shrink-0 items-center border px-4 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember ${
         active
           ? "border-ink bg-ink text-paper"
-          : "border-ink text-ink hover:bg-ink/5"
+          : "border-ink text-ink hover:bg-ink/5 active:bg-ink/10"
       }`}
     >
       {children}
@@ -313,7 +346,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="text-[13px] font-medium text-clay opacity-40">
+      <span className="flex h-11 items-center text-[13px] font-medium text-clay opacity-40">
         {children}
       </span>
     );
@@ -322,7 +355,7 @@ function PageLink({
     <Link
       href={href}
       scroll={false}
-      className="text-[13px] font-medium transition-colors hover:text-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+      className="flex h-11 items-center text-[13px] font-medium transition-colors hover:text-ember active:text-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
     >
       {children}
     </Link>

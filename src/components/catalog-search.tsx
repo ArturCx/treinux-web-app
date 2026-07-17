@@ -18,9 +18,11 @@ export function CatalogSearch({ placeholder }: { placeholder: string }) {
   const firstRender = useRef(true);
 
   // Mantém o input em sincronia quando a URL muda por fora (voltar, limpar filtros).
-  useEffect(() => {
+  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
+  if (prevUrlQuery !== urlQuery) {
+    setPrevUrlQuery(urlQuery);
     setValue(urlQuery);
-  }, [urlQuery]);
+  }
 
   useEffect(() => {
     if (firstRender.current) {
@@ -43,21 +45,35 @@ export function CatalogSearch({ placeholder }: { placeholder: string }) {
   }, [value, urlQuery, pathname, router, searchParams]);
 
   return (
-    <div className="relative flex-1">
+    <div className="group relative flex-1">
       <label htmlFor="catalog-search" className="sr-only">
         Buscar exercício
       </label>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 text-muted transition-colors group-focus-within:text-ember"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </span>
       <input
         id="catalog-search"
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="peer h-12 w-full border-b-2 border-ink bg-transparent px-0.5 pr-8 text-[17px] font-medium outline-none transition-colors placeholder:text-clay"
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0 bg-ember transition-transform duration-300 ease-out peer-focus:scale-x-100"
+        className="h-12 w-full border-b border-ink bg-transparent pr-8 pl-8 text-[16px] font-medium outline-none transition-colors placeholder:text-clay focus:border-ember"
       />
       {pending && (
         <span
