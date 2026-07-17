@@ -45,40 +45,22 @@ export function CatalogSearch({ placeholder }: { placeholder: string }) {
   }, [value, urlQuery, pathname, router, searchParams]);
 
   return (
-    <div className="group relative flex-1">
+    <div className="relative flex-1">
       <label htmlFor="catalog-search" className="sr-only">
         Buscar exercício
       </label>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 text-muted transition-colors group-focus-within:text-ember"
-      >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-      </span>
       <input
         id="catalog-search"
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="h-12 w-full border-b border-ink bg-transparent pr-8 pl-8 text-[16px] font-medium outline-none transition-colors placeholder:text-clay focus:border-ember"
+        className="h-[54px] w-full border-b-2 border-ink bg-transparent px-0.5 pr-8 text-[17px] font-medium outline-none transition-colors placeholder:text-clay focus:border-riso"
       />
       {pending && (
         <span
           aria-hidden="true"
-          className="absolute top-1/2 right-1 inline-block size-4 -translate-y-1/2 animate-spin rounded-full border-2 border-paper-edge border-t-ember"
+          className="absolute top-1/2 right-1 inline-block size-4 -translate-y-1/2 animate-spin rounded-full border-2 border-paper-edge border-t-riso"
         />
       )}
     </div>

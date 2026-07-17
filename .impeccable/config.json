@@ -1,0 +1,16 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "src/app/globals.css"
+    ],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.2, 1.4, 0.4, 1)",
+        "reason": "Easing do pop de LED vem literal do handoff aprovado (design_handoff_treinux_hybrid/70-componentes.html T-04)",
+        "createdAt": "2026-07-17T18:12:12.322Z"
+      }
+    ]
+  }
+}

@@ -163,6 +163,7 @@ model WorkoutLogEntry {
   weightKg   Decimal?   @db.Decimal(6, 2)
   durationS  Int? // p/ isometrias (prancha, etc.)
   notes      String?
+  completedAt DateTime? @default(now()) // instante em que a série foi registrada — base do descanso médio
 
   @@unique([logId, exerciseId, setNumber]) // 1 registro por série (upsert)
   @@index([logId])

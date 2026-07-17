@@ -2,186 +2,264 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { fichaStats, splitFichaName } from "@/lib/ficha-stats";
-import { QuickDelete } from "./quick-delete";
+import {
+  BarbellViz,
+  MiniStamp,
+  Overprint,
+  Plates,
+  SectionLabel,
+  Stamp,
+  Tape,
+} from "@/components/zine";
+import { ArchivedActions, CardActions } from "./card-actions";
+
+const LETTERS = "ABCDEFGHIJ";
 
 export default async function FichasPage() {
   const session = await requireSession();
+  // eslint-disable-next-line react-hooks/purity -- server component por request: o ticker mostra a janela real de 7 dias
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const fichas = await prisma.ficha.findMany({
-    where: { userId: session.user.id },
-    orderBy: [{ archived: "asc" }, { updatedAt: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      notes: true,
-      archived: true,
-      updatedAt: true,
-      exercises: { select: { sets: true, restSeconds: true } },
-    },
-  });
+  const [fichas, weekSets, lastLog] = await Promise.all([
+    prisma.ficha.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ archived: "asc" }, { updatedAt: "desc" }],
+      select: {
+        id: true,
+        name: true,
+        archived: true,
+        createdAt: true,
+        updatedAt: true,
+        exercises: { select: { sets: true, restSeconds: true } },
+      },
+    }),
+    prisma.workoutLogEntry.count({
+      where: { log: { userId: session.user.id, startedAt: { gte: weekAgo } } },
+    }),
+    prisma.workoutLog.findFirst({
+      where: { userId: session.user.id, finishedAt: { not: null } },
+      orderBy: { finishedAt: "desc" },
+      select: { finishedAt: true, ficha: { select: { id: true, name: true } } },
+    }),
+  ]);
 
   if (fichas.length === 0) return <FirstRun />;
 
   const active = fichas.filter((f) => !f.archived);
   const archived = fichas.filter((f) => f.archived);
 
+  // rotação: próxima ficha após a última treinada, em ordem de criação
+  const nextInRotation = suggestNext(active, lastLog?.ficha?.id ?? null);
+
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col">
-      <div className="flex items-end justify-between gap-4">
-        <h1 className="text-[30px] leading-none font-bold tracking-[-0.03em] lg:text-[38px]">
-          Suas fichas<span className="text-ember">.</span>
-        </h1>
-        <div className="text-right">
-          <div className="text-[44px] leading-[0.9] font-bold tracking-[-0.04em] text-ember tabular-nums lg:text-[56px]">
-            {active.length}
-          </div>
-          <div className="text-[10.5px] font-medium tracking-[0.1em] text-muted">
-            {active.length === 1 ? "ATIVA" : "ATIVAS"}
+    <div>
+      {/* ── capa ─────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden border-b-2 border-ink px-[18px] pt-4 pb-[30px] lg:px-10 lg:pb-10">
+        <div className="relative mx-auto max-w-[1240px]">
+          <Plates />
+          <Stamp
+            text="FICHA DE TREINO ★ TREINUX ★"
+            className="absolute top-11 right-0.5 z-[3] size-[118px] opacity-90 lg:top-14 lg:right-10 lg:size-[170px]"
+          />
+          <h1 className="shout relative z-[2] mt-[52px] text-[clamp(64px,19vw,150px)] lg:mt-16">
+            <Overprint plate text="Suas fichas" />
+          </h1>
+          <div className="relative z-[2] mt-3.5 flex flex-wrap items-center gap-2.5 text-[12.5px] font-medium tracking-[0.1em] uppercase tabular-nums">
+            <span className="border border-ink bg-paper px-2 py-[3px]">
+              {active.length} {active.length === 1 ? "ativa" : "ativas"}
+            </span>
+            <span aria-hidden="true" className="size-[7px] rounded-full bg-ember" />
+            <span className="border border-ink bg-paper px-2 py-[3px]">
+              {archived.length} {archived.length === 1 ? "arquivada" : "arquivadas"}
+            </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <Link
-        href="/fichas/nova"
-        className="group mt-6 flex h-15 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        <span>Nova ficha</span>
-        <span
-          aria-hidden="true"
-          className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-        >
-          →
-        </span>
-      </Link>
+      <Ticker
+        items={[
+          `${active.length} ${active.length === 1 ? "ficha ativa" : "fichas ativas"}`,
+          `${weekSets} séries na semana`,
+          lastLog?.finishedAt
+            ? `último treino: ${formatTickerDate(lastLog.finishedAt)}${lastLog.ficha ? ` · ${tickerFichaLabel(lastLog.ficha.name)}` : ""}`
+            : "nenhum treino registrado ainda",
+          ...(nextInRotation
+            ? [`próximo da rotação: ${tickerFichaLabel(nextInRotation.name)}`]
+            : []),
+        ]}
+      />
 
-      <Link
-        href="/fichas/gerar"
-        className="group mt-2.5 flex h-12 items-center justify-between border-2 border-ink px-5 text-[14px] font-bold transition-colors hover:bg-ink/5 active:bg-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        <span>Gerar ficha automaticamente</span>
-        <span
-          aria-hidden="true"
-          className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-        >
-          →
-        </span>
-      </Link>
+      {/* ── lista ────────────────────────────────────────────── */}
+      <main className="mx-auto max-w-[1240px] px-[18px] pt-[30px] pb-[70px] lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-x-12 lg:px-10 lg:pt-11 lg:pb-[90px]">
+        <SectionLabel title="Em circulação" count={active.length} className="lg:col-span-2" />
 
-      {active.length > 0 && <FichaList fichas={active} />}
+        <div className="mt-6 flex flex-col gap-[26px]">
+          {active.map((ficha, i) => {
+            const [head, tail] = splitFichaName(ficha.name);
+            const stats = fichaStats(ficha.exercises);
+            const blue = i % 2 === 0;
 
-      {archived.length > 0 && (
-        <section className="mt-10">
-          <h2 className="border-b-2 border-ink pb-2 text-[11px] font-medium tracking-[0.14em] text-muted">
-            ARQUIVADAS
-          </h2>
-          <FichaList fichas={archived} dimmed />
-        </section>
-      )}
+            return (
+              <article
+                key={ficha.id}
+                className={`relative border-2 border-ink bg-paper px-4 pt-[18px] transition-transform duration-200 ease-out ${
+                  blue
+                    ? "shadow-[7px_7px_0_var(--color-riso)] hover:-rotate-1"
+                    : "shadow-[7px_7px_0_var(--color-ember)] hover:rotate-1"
+                }`}
+              >
+                <Tape
+                  className={`-top-[13px] left-1/2 ${blue ? "-translate-x-1/2 -rotate-2" : "-translate-x-[58%] rotate-[1.6deg]"}`}
+                />
+                <div
+                  aria-hidden="true"
+                  className={`shout pointer-events-none absolute -top-1 right-2 z-0 text-[92px] leading-none tracking-[-0.02em] mix-blend-multiply select-none tabular-nums ${
+                    blue ? "text-riso opacity-[0.22]" : "text-ember opacity-[0.24]"
+                  }`}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </div>
+
+                <div className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
+                  Ficha {LETTERS[i] ?? i + 1} · atual. {formatShortDate(ficha.updatedAt)}
+                </div>
+                <h2 className="relative z-[1] mt-1.5 pr-14 text-[24px] leading-[1.08] font-bold tracking-[-0.025em] lg:text-[28px]">
+                  {head}
+                  {tail && <span className="text-ember"> {tail}</span>}
+                </h2>
+
+                <div className="relative z-[1] mt-4 flex border-t-2 border-ink tabular-nums">
+                  <CardStat
+                    value={stats.exercises}
+                    label={stats.exercises === 1 ? "Exercício" : "Exercícios"}
+                  />
+                  <CardStat value={stats.sets} label="Séries" />
+                  <CardStat value={stats.minutes > 0 ? `~${stats.minutes}` : "—"} label="Min" last />
+                </div>
+
+                <div className="relative z-[1] flex items-center gap-2.5 pt-2.5 pb-3.5">
+                  <BarbellViz sets={stats.sets} className="h-[30px] w-auto" />
+                  <span className="text-[10px] font-medium tracking-[0.12em] text-clay uppercase tabular-nums">
+                    1 anilha = 4 séries
+                  </span>
+                </div>
+
+                <CardActions id={ficha.id} name={ficha.name} />
+              </article>
+            );
+          })}
+        </div>
+
+        {/* CTAs — coluna sticky no desktop */}
+        <div className="mt-[38px] flex flex-col gap-4 lg:sticky lg:top-7 lg:mt-6">
+          <Link
+            href="/fichas/nova"
+            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          >
+            Nova ficha
+            <span aria-hidden="true" className="text-[22px]">
+              →
+            </span>
+          </Link>
+          <div className="relative">
+            <Link
+              href="/fichas/gerar"
+              className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-paper px-5 text-[19px] tracking-[0.05em] text-ink shadow-[7px_7px_0_var(--color-riso)] transition-[transform,box-shadow,color] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:text-riso hover:shadow-[5px_5px_0_var(--color-riso)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            >
+              Gerar ficha automaticamente
+              <span aria-hidden="true" className="text-[22px]">
+                ↻
+              </span>
+            </Link>
+            <span className="absolute right-3.5 -bottom-[11px] rotate-[2.5deg] bg-fluo px-2 py-[3px] text-[11px] font-bold tracking-[0.14em] text-ink uppercase">
+              novo!
+            </span>
+          </div>
+        </div>
+
+        {/* ── arquivadas ───────────────────────────────────────── */}
+        {archived.length > 0 && (
+          <section className="mt-14 lg:col-span-2">
+            <SectionLabel title="Fora de catálogo" dim />
+            <div className="mt-4 flex flex-col gap-3">
+              {archived.map((ficha) => (
+                <div
+                  key={ficha.id}
+                  className="relative flex flex-wrap items-center gap-x-3.5 gap-y-2 border-2 border-dashed border-clay px-4 py-3.5 text-muted"
+                >
+                  <h3 className="min-w-0 flex-1 text-[18px] font-bold tracking-[-0.02em] text-ink-soft opacity-70">
+                    {ficha.name}
+                  </h3>
+                  <MiniStamp className="-rotate-[8deg] text-[13px]">Arquivada</MiniStamp>
+                  <ArchivedActions id={ficha.id} name={ficha.name} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+      </main>
     </div>
   );
 }
 
-type FichaCard = {
-  id: string;
-  name: string;
-  notes: string | null;
-  archived: boolean;
-  updatedAt: Date;
-  exercises: { sets: number; restSeconds: number | null }[];
-};
-
-function FichaList({
-  fichas,
-  dimmed = false,
+function CardStat({
+  value,
+  label,
+  last = false,
 }: {
-  fichas: FichaCard[];
-  dimmed?: boolean;
+  value: number | string;
+  label: string;
+  last?: boolean;
 }) {
   return (
-    <ul className={dimmed ? "opacity-55" : undefined}>
-      {fichas.map((ficha, i) => {
-        const [head, tail] = splitFichaName(ficha.name);
-        const stats = fichaStats(ficha.exercises);
-
-        return (
-          <li key={ficha.id} className="relative overflow-hidden">
-            <Link
-              href={`/fichas/${ficha.id}`}
-              className="group relative block border-b border-paper-edge py-6 transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-4 right-1 text-[96px] leading-none font-bold tracking-[-0.05em] text-paper-deep select-none tabular-nums"
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-
-              <div className="relative flex items-start gap-4 px-1">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-[26px] leading-[1.05] font-bold tracking-[-0.03em] lg:text-[30px]">
-                    {head}
-                    {tail && <span className="text-ember"> {tail}</span>}
-                  </h3>
-
-                  {ficha.notes && (
-                    <p className="mt-2 line-clamp-1 max-w-lg text-[13.5px] text-muted">
-                      {ficha.notes}
-                    </p>
-                  )}
-
-                  <div className="mt-3 flex items-center gap-4 text-[12px] tracking-[0.06em] text-muted">
-                    <span>
-                      <span className="font-bold text-ink tabular-nums">
-                        {stats.exercises}
-                      </span>{" "}
-                      {stats.exercises === 1 ? "EXERCÍCIO" : "EXERCÍCIOS"}
-                    </span>
-                    <span>
-                      <span className="font-bold text-ink tabular-nums">
-                        {stats.sets}
-                      </span>{" "}
-                      SÉRIES
-                    </span>
-                    {stats.minutes > 0 && (
-                      <span>
-                        <span className="font-bold text-ink tabular-nums">
-                          ~{stats.minutes}
-                        </span>{" "}
-                        MIN
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <span
-                  aria-hidden="true"
-                  className="self-center text-[20px] text-ember opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100"
-                >
-                  →
-                </span>
-              </div>
-            </Link>
-
-            {/* atalho de exclusão na base direita, alinhado com as stats —
-                o topo direito pertence ao numeral de impresso */}
-            <div className="absolute right-1 bottom-2 z-10">
-              <QuickDelete id={ficha.id} name={ficha.name} />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div className={`flex-1 py-2.5 ${last ? "" : "border-r border-dashed border-clay"}`}>
+      <div className="text-[26px] leading-none font-bold tracking-[-0.03em] lg:text-[30px]">
+        {value}
+      </div>
+      <div className="mt-[3px] text-[10px] font-medium tracking-[0.14em] text-muted uppercase">
+        {label}
+      </div>
+    </div>
   );
 }
 
-/** Primeira visita: cartaz tipográfico, não um card com texto de ajuda. */
+/** Marquee de dados reais entre réguas de tinta — nunca frase motivacional. */
+function Ticker({ items }: { items: string[] }) {
+  const strip = (
+    <span className="shout inline-flex items-center text-[15px] tracking-[0.14em] tabular-nums">
+      {items.map((item, i) => (
+        <span key={i} className="inline-flex items-center">
+          <span className="px-4">{item}</span>
+          <span aria-hidden="true" className={i % 2 === 0 ? "text-ember" : "text-riso"}>
+            ★
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+
+  return (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden border-b-2 border-ink py-[9px] whitespace-nowrap"
+    >
+      <div className="flex w-max animate-marquee">
+        {strip}
+        {strip}
+      </div>
+    </div>
+  );
+}
+
+/** Primeira visita (Z-05): cartaz tipográfico do zine. */
 function FirstRun() {
   return (
-    <div className="-my-8 flex min-h-[calc(100dvh-165px)] flex-col justify-center lg:-my-12 lg:min-h-[calc(100dvh-129px)]">
+    <div className="mx-auto max-w-[1240px] px-[18px] py-14 lg:px-10 lg:py-20">
       <div className="mx-auto w-full max-w-3xl">
         <span
           aria-hidden="true"
-          className="block text-[clamp(110px,38vw,190px)] leading-[0.85] font-bold tracking-[-0.06em] select-none tabular-nums"
+          className="shout block text-[clamp(110px,32vw,190px)] leading-[0.9] tracking-[-0.03em] text-paper-edge select-none tabular-nums"
         >
           00<span className="text-ember">1</span>
         </span>
@@ -191,39 +269,33 @@ function FirstRun() {
             Toda rotina séria começa com uma ficha.
           </h1>
           <p className="mt-3 max-w-lg text-[14.5px] leading-relaxed text-muted">
-            Monte seu plano com exercícios do catálogo — +1.300 movimentos com
+            Monte seu plano com exercícios do catálogo — +1300 movimentos com
             foto, músculos-alvo e instruções passo a passo.
           </p>
         </div>
 
-        <div className="mt-8 max-w-md">
+        <div className="mt-8 flex max-w-md flex-col gap-4">
           <Link
             href="/fichas/nova"
-            className="group flex h-15 items-center justify-between bg-ink px-5 text-[16px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
-            <span>Criar primeira ficha</span>
-            <span
-              aria-hidden="true"
-              className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-            >
+            Criar primeira ficha
+            <span aria-hidden="true" className="text-[22px]">
               →
             </span>
           </Link>
           <Link
             href="/fichas/gerar"
-            className="group mt-2.5 flex h-12 items-center justify-between border-2 border-ink px-5 text-[14px] font-bold transition-colors hover:bg-ink/5 active:bg-ink/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="shout flex min-h-14 items-center justify-between gap-3 border-2 border-ink bg-paper px-5 text-[17px] tracking-[0.05em] text-ink shadow-[7px_7px_0_var(--color-riso)] transition-[transform,box-shadow,color] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:text-riso hover:shadow-[5px_5px_0_var(--color-riso)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
-            <span>Gerar ficha automaticamente</span>
-            <span
-              aria-hidden="true"
-              className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-            >
-              →
+            Gerar ficha automaticamente
+            <span aria-hidden="true" className="text-[20px]">
+              ↻
             </span>
           </Link>
           <Link
             href="/exercicios"
-            className="mt-3.5 block text-center text-[14px] font-medium text-muted underline decoration-ember underline-offset-3 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="mt-1 block text-center text-[14px] font-medium text-muted underline decoration-ember underline-offset-3 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             Explorar o catálogo primeiro
           </Link>
@@ -231,4 +303,40 @@ function FirstRun() {
       </div>
     </div>
   );
+}
+
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" })
+    .format(date)
+    .replace(".", "");
+}
+
+function formatTickerDate(date: Date) {
+  const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
+    .format(date)
+    .replace(".", "");
+  return `${weekday} ${date.getDate()}`;
+}
+
+/** Rótulo curto da ficha no ticker: o "assunto" (tail) quando existir. */
+function tickerFichaLabel(name: string) {
+  const [head, tail] = splitFichaName(name);
+  return tail ?? head;
+}
+
+/**
+ * Próxima ficha da rotação: a que vem depois da última treinada, em ordem de
+ * criação (cíclico). Sem última treinada, sugere a primeira. Só faz sentido
+ * com 2+ fichas ativas.
+ */
+function suggestNext<T extends { id: string; name: string; createdAt: Date }>(
+  active: T[],
+  lastTrainedId: string | null,
+): T | null {
+  if (active.length < 2) return null;
+  const rotation = [...active].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  );
+  const idx = lastTrainedId ? rotation.findIndex((f) => f.id === lastTrainedId) : -1;
+  return idx >= 0 ? rotation[(idx + 1) % rotation.length] : rotation[0];
 }

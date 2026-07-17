@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { Grain } from "@/components/zine";
 
 const FICHA_ROWS = [
   { num: "01", name: "SUPINO RETO", rx: "4 × 8-12", done: true },
@@ -26,12 +27,13 @@ const MUSCLE_TICKER = [
 function Ticker() {
   const strip = (
     <span aria-hidden="true" className="flex shrink-0 items-center">
-      {MUSCLE_TICKER.map((m) => (
+      {MUSCLE_TICKER.map((m, i) => (
         <span key={m} className="flex items-center">
           <span className="px-5 text-[12px] font-medium tracking-[0.22em] text-paper/60">
             {m}
           </span>
-          <span className="size-[5px] rounded-full bg-ember" />
+          {/* segunda tinta do zine: pontos alternam ember e azul riso */}
+          <span className={`size-[5px] rounded-full ${i % 2 === 0 ? "bg-ember" : "bg-riso"}`} />
         </span>
       ))}
     </span>
@@ -65,11 +67,18 @@ function Stamp() {
           cy="72"
           r="70"
           fill="none"
-          stroke="#d14b24"
+          stroke="var(--color-riso)"
           strokeWidth="1.5"
         />
-        <circle cx="72" cy="72" r="38" fill="none" stroke="#d14b24" strokeWidth="1" />
-        <text className="fill-ember text-[13.5px] font-semibold tracking-[0.24em]">
+        <circle
+          cx="72"
+          cy="72"
+          r="38"
+          fill="none"
+          stroke="var(--color-riso)"
+          strokeWidth="1"
+        />
+        <text className="fill-riso text-[13.5px] font-semibold tracking-[0.24em]">
           <textPath href="#stamp-circle">
             +1300 EXERCÍCIOS · CATÁLOGO COMPLETO · TREINUX ·
           </textPath>
@@ -171,6 +180,7 @@ export default async function AuthLayout({
 
   return (
     <div className="grid min-h-dvh grid-rows-[auto_1fr] lg:grid-cols-[1.08fr_1fr] lg:grid-rows-none">
+      <Grain />
       <Poster />
       <main className="flex items-start justify-center px-7 py-12 lg:items-center lg:py-16">
         <div className="w-full max-w-[390px] animate-enter">{children}</div>

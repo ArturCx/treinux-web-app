@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { addExercise } from "@/app/(app)/fichas/actions";
-import { SetsStepper } from "./sets-stepper";
 
 const OpenCardContext = createContext<{
   openId: string | null;
@@ -13,8 +12,8 @@ const OpenCardContext = createContext<{
 } | null>(null);
 
 /**
- * Coordena os cards de adição do grid: guarda o id do único card expandido,
- * então abrir um fecha o anterior.
+ * Coordena os espécimes do grid em modo adicionar: guarda o id do único
+ * card expandido, então abrir um fecha o anterior.
  */
 export function AddExerciseGroup({ children }: { children: React.ReactNode }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -24,9 +23,9 @@ export function AddExerciseGroup({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Card do catálogo no contexto de uma ficha: tocar no card expande o painel
- * de prescrição (séries via stepper) — a ação não fica poluindo o grid, e o
- * alvo de toque é o card inteiro, generoso no mobile.
+ * Espécime do catálogo em modo adicionar (20-catalogo): "Adicionar" expande
+ * o painel de prescrição (stepper de séries) no próprio card, que ganha
+ * contorno + sombra dura azul.
  */
 export function AddExerciseCard({
   fichaId,
@@ -48,76 +47,104 @@ export function AddExerciseCard({
   const open = group ? group.openId === exerciseId : soloOpen;
   const toggle = () =>
     group ? group.setOpenId(open ? null : exerciseId) : setSoloOpen(!open);
-  const [sets, setSets] = useState(3);
+  const [sets, setSets] = useState(4);
   const panelId = useId();
 
   return (
-    <div className="flex h-full flex-col">
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-controls={panelId}
-        className="group flex cursor-pointer flex-col gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        <span className="flex items-baseline justify-between">
-          <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
-            {number}
-          </span>
-          {/* affordance: + vira × ao abrir — o card é expansível, não um link */}
-          <span
-            aria-hidden="true"
-            className={`text-[18px] leading-none font-bold text-ember transition-transform duration-200 ease-out ${open ? "rotate-45" : "group-hover:scale-110"}`}
-          >
-            +
-          </span>
-        </span>
-        <Image
-          src={imageUrl}
-          alt=""
-          width={200}
-          height={200}
-          className="aspect-square w-full bg-paper-edge object-cover"
-        />
-        <span className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
-          {name}
-        </span>
-        <span className="text-[12px] text-muted">{taxonomy}</span>
-      </button>
+    <div
+      className={`flex h-full flex-col bg-paper ${
+        open
+          ? "relative z-[1] -outline-offset-1 bg-paper-deep outline-2 outline-ink shadow-[7px_7px_0_var(--color-riso)]"
+          : ""
+      }`}
+    >
+      <div className="px-3 pt-2.5 pb-2 text-[10px] font-bold tracking-[0.14em] text-clay uppercase tabular-nums">
+        {number}
+      </div>
+      <DuotonePhoto imageUrl={imageUrl} />
+      <h3 className="px-3 pt-2.5 text-[15px] leading-[1.2] font-bold tracking-[-0.01em] lg:text-[16px]">
+        {name}
+      </h3>
+      <div className="px-3 pt-0.5 text-[11.5px] text-muted">{taxonomy}</div>
 
-      {open && (
-        <form
+      {open ? (
+        <div
           id={panelId}
-          action={addExercise}
-          className="animate-rise -mx-3.5 -mb-3.5 mt-3 flex flex-col gap-3 border-t border-dashed border-paper-edge bg-paper-deep p-3.5"
+          className="animate-rise mx-3 mt-2.5 mb-3 border-t-2 border-ink pt-3"
         >
-          <input type="hidden" name="fichaId" value={fichaId} />
-          <input type="hidden" name="exerciseId" value={exerciseId} />
-          <input type="hidden" name="sets" value={sets} />
+          <form action={addExercise}>
+            <input type="hidden" name="fichaId" value={fichaId} />
+            <input type="hidden" name="exerciseId" value={exerciseId} />
+            <input type="hidden" name="sets" value={sets} />
 
-          <div className="flex flex-col gap-1">
-            <span className="text-[10.5px] font-medium tracking-[0.1em] text-muted">
-              SÉRIES
-            </span>
-            <SetsStepper value={sets} onChange={setSets} />
-          </div>
+            <div className="mb-1.5 text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
+              Séries
+            </div>
+            <div className="flex w-max border border-ink bg-paper tabular-nums">
+              <button
+                type="button"
+                onClick={() => setSets((s) => Math.max(1, s - 1))}
+                aria-label="Menos uma série"
+                className="size-12 cursor-pointer text-[20px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+              >
+                −
+              </button>
+              <span className="flex w-14 items-center justify-center border-x border-ink text-[19px] font-bold">
+                {sets}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSets((s) => Math.min(20, s + 1))}
+                aria-label="Mais uma série"
+                className="size-12 cursor-pointer text-[20px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+              >
+                +
+              </button>
+            </div>
 
-          <SubmitButton />
-
+            <SubmitButton />
+          </form>
           <Link
             href={`/exercicios/${exerciseId}`}
-            className="group/ver flex h-11 w-full items-center justify-between border border-ink px-3 text-[13px] font-bold transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="mt-2.5 block py-2 text-center text-[13px] font-medium text-muted underline underline-offset-3 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
-            <span>Ver exercício</span>
-            <span
-              aria-hidden="true"
-              className="text-[16px] leading-none text-ember transition-transform duration-200 group-hover/ver:translate-x-0.5"
-            >
-              →
-            </span>
+            Ver exercício
           </Link>
-        </form>
+        </div>
+      ) : (
+        <div className="mt-auto p-3">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            aria-controls={panelId}
+            className="min-h-12 w-full cursor-pointer border border-ink bg-paper text-[14px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          >
+            Adicionar
+          </button>
+        </div>
       )}
+    </div>
+  );
+}
+
+/** Foto do espécime em cor original, sobre um fundo neutro. */
+export function DuotonePhoto({
+  imageUrl,
+  className = "",
+}: {
+  imageUrl: string;
+  className?: string;
+}) {
+  return (
+    <div className={`relative mx-3 aspect-[4/3] overflow-hidden bg-paper-edge ${className}`}>
+      <Image
+        src={imageUrl}
+        alt=""
+        width={300}
+        height={225}
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }
@@ -128,15 +155,22 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex h-11 w-full cursor-pointer items-center justify-center gap-2.5 bg-ink text-[14px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft disabled:cursor-default disabled:bg-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+      className="mt-3 flex min-h-[50px] w-full cursor-pointer items-center justify-between gap-2.5 bg-ink px-3.5 text-[14.5px] font-bold text-paper transition-colors hover:bg-ink-soft disabled:cursor-default disabled:bg-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
     >
-      {pending && (
-        <span
-          aria-hidden="true"
-          className="inline-block size-3.5 animate-spin rounded-full border-2 border-paper/35 border-t-paper"
-        />
+      <span className="flex items-center gap-2.5">
+        {pending && (
+          <span
+            aria-hidden="true"
+            className="inline-block size-[15px] animate-spin rounded-full border-2 border-paper/35 border-t-paper"
+          />
+        )}
+        {pending ? "Adicionando…" : "Adicionar à ficha"}
+      </span>
+      {!pending && (
+        <i aria-hidden="true" className="text-ember not-italic">
+          →
+        </i>
       )}
-      {pending ? "Adicionando…" : "Adicionar à ficha"}
     </button>
   );
 }

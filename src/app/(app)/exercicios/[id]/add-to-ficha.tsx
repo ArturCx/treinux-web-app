@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addExerciseToFicha } from "../../fichas/actions";
-import { SetsStepper } from "@/components/sets-stepper";
+import { Tape } from "@/components/zine";
 
 type FichaOption = { id: string; name: string; hasExercise: boolean };
 
 /**
- * Adiciona à ficha direto da tela de detalhe. Com uma ficha só, é um botão;
- * com várias, abre a lista — sem select nativo, para manter o sistema visual.
+ * Seletor de ficha (50-exercicio): lista das fichas do usuário com ação por
+ * linha — "escolha onde este espécime entra na rotação". Sem select nativo.
  */
 export function AddToFicha({
   exerciseId,
@@ -18,145 +18,100 @@ export function AddToFicha({
   exerciseId: string;
   fichas: FichaOption[];
 }) {
-  const [open, setOpen] = useState(false);
   const [sets, setSets] = useState(3);
 
-  if (fichas.length === 0) {
-    return (
-      <Link
-        href="/fichas/nova"
-        className="group flex h-14 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        <span>Criar ficha para adicionar</span>
-        <span
-          aria-hidden="true"
-          className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-        >
-          →
-        </span>
-      </Link>
-    );
-  }
-
-  if (fichas.length === 1 && !open) {
-    const ficha = fichas[0];
-    if (ficha.hasExercise) {
-      return (
-        <Link
-          href={`/fichas/${ficha.id}`}
-          className="flex h-14 items-center justify-between border-2 border-paper-edge px-5 text-[15px] font-medium text-muted transition-colors hover:border-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-        >
-          <span>
-            <span className="text-ember">✓</span> Já está em {ficha.name}
-          </span>
-          <span aria-hidden="true">→</span>
-        </Link>
-      );
-    }
-    return (
-      <form action={addExerciseToFicha} className="flex flex-col gap-2.5">
-        <input type="hidden" name="exerciseId" value={exerciseId} />
-        <input type="hidden" name="fichaId" value={ficha.id} />
-        <input type="hidden" name="sets" value={sets} />
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] font-medium tracking-[0.1em] text-muted">
-            SÉRIES
-          </span>
-          <div className="w-36">
-            <SetsStepper value={sets} onChange={setSets} />
-          </div>
-        </div>
-        <button
-          type="submit"
-          className="group flex h-14 w-full cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-        >
-          <span>Adicionar a {ficha.name}</span>
-          <span
-            aria-hidden="true"
-            className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-          >
-            →
-          </span>
-        </button>
-      </form>
-    );
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="group flex h-14 cursor-pointer items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        <span>Adicionar a uma ficha</span>
-        <span
-          aria-hidden="true"
-          className="text-[18px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-        >
-          →
-        </span>
-      </button>
-    );
-  }
-
   return (
-    <div className="animate-rise flex flex-col border-2 border-ink">
-      <div className="flex items-center justify-between border-b border-paper-edge bg-ink px-4 py-2.5">
-        <span className="text-[11px] font-medium tracking-[0.1em] text-clay">
-          ESCOLHA A FICHA
-        </span>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="cursor-pointer text-[12px] font-medium text-clay transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper"
-        >
-          Fechar
-        </button>
-      </div>
-      <div className="flex items-center justify-between gap-3 border-b border-paper-edge px-4 py-2.5">
-        <span className="text-[11px] font-medium tracking-[0.1em] text-muted">
-          SÉRIES
-        </span>
-        <div className="w-36">
-          <SetsStepper value={sets} onChange={setSets} />
+    <section
+      aria-label="Adicionar a uma ficha"
+      className="relative border-2 border-ink bg-paper-deep"
+    >
+      <Tape className="-top-[13px] left-6 w-24 -rotate-2" />
+      <div className="px-4 pt-4">
+        <h2 className="text-[16px] font-bold tracking-[0.1em] uppercase">
+          Adicionar a uma ficha
+        </h2>
+        <div className="mt-0.5 text-[12.5px] text-muted">
+          Escolha onde este espécime entra na rotação.
         </div>
       </div>
-      <ul>
-        {fichas.map((ficha) => (
-          <li key={ficha.id} className="border-b border-paper-edge last:border-b-0">
-            {ficha.hasExercise ? (
-              <Link
-                href={`/fichas/${ficha.id}`}
-                className="flex h-13 items-center justify-between px-4 text-[14.5px] text-muted transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+
+      {fichas.length === 0 ? (
+        <div className="m-4 mt-3.5">
+          <Link
+            href="/fichas/nova"
+            className="flex min-h-[52px] items-center justify-between bg-ink px-4 text-[14.5px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          >
+            Criar ficha para adicionar
+            <i aria-hidden="true" className="text-ember not-italic">
+              →
+            </i>
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-paper-edge px-4 py-2.5">
+            <span className="text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
+              Séries
+            </span>
+            <div className="flex border border-ink bg-paper tabular-nums">
+              <button
+                type="button"
+                onClick={() => setSets((s) => Math.max(1, s - 1))}
+                aria-label="Menos uma série"
+                className="size-11 cursor-pointer text-[18px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
               >
-                <span>{ficha.name}</span>
-                <span className="text-[12.5px] font-bold text-ember">
-                  ✓ já está
-                </span>
-              </Link>
-            ) : (
-              <form action={addExerciseToFicha}>
-                <input type="hidden" name="exerciseId" value={exerciseId} />
-                <input type="hidden" name="fichaId" value={ficha.id} />
-                <input type="hidden" name="sets" value={sets} />
-                <button
-                  type="submit"
-                  className="group flex h-13 w-full cursor-pointer items-center justify-between px-4 text-left text-[14.5px] font-medium transition-colors hover:bg-paper-deep active:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
-                >
-                  <span>{ficha.name}</span>
-                  <span
-                    aria-hidden="true"
-                    className="text-ember opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100"
+                −
+              </button>
+              <span className="flex w-12 items-center justify-center border-x border-ink text-[17px] font-bold">
+                {sets}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSets((s) => Math.min(20, s + 1))}
+                aria-label="Mais uma série"
+                className="size-11 cursor-pointer text-[18px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <ul>
+            {fichas.map((ficha) => (
+              <li
+                key={ficha.id}
+                className="flex items-center gap-3 border-t border-paper-edge px-4 py-3.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[15.5px] leading-tight font-bold tracking-[-0.015em]">
+                    {ficha.name}
+                  </h3>
+                </div>
+                {ficha.hasExercise ? (
+                  <Link
+                    href={`/fichas/${ficha.id}`}
+                    className="flex min-h-12 flex-none items-center bg-ember px-3.5 text-[12.5px] font-bold tracking-[0.04em] text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
                   >
-                    →
-                  </span>
-                </button>
-              </form>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+                    ✓ Já na ficha
+                  </Link>
+                ) : (
+                  <form action={addExerciseToFicha}>
+                    <input type="hidden" name="exerciseId" value={exerciseId} />
+                    <input type="hidden" name="fichaId" value={ficha.id} />
+                    <input type="hidden" name="sets" value={sets} />
+                    <button
+                      type="submit"
+                      className="min-h-12 flex-none cursor-pointer border border-ink bg-paper px-4 text-[13.5px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+                    >
+                      Adicionar
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }

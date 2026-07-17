@@ -31,47 +31,29 @@ export default async function AdicionarExercicioPage({
   const inFicha = new Set(ficha.exercises.map((e) => e.exerciseId));
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href={`/fichas/${ficha.id}`}
-          className="min-w-0 truncate text-[13px] font-medium text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-        >
-          ← {ficha.name}
-        </Link>
-        <Link
-          href={`/fichas/${ficha.id}`}
-          className="group flex h-11 shrink-0 items-center gap-3 bg-ink px-4 text-[14px] font-bold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-        >
-          Concluir
-          <span
-            aria-hidden="true"
-            className="text-ember transition-transform duration-200 group-hover:translate-x-1"
-          >
-            →
+    <div>
+      {/* contexto: para qual ficha este catálogo está adicionando */}
+      <div className="border-b border-paper-edge bg-paper-deep">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-3 gap-y-1 px-[18px] py-2.5 text-[12.5px] font-medium tracking-[0.08em] text-muted uppercase lg:px-10">
+          <span className="min-w-0 truncate">
+            Adicionando à ficha: <b className="font-bold text-ink">{ficha.name}</b>
+            {inFicha.size > 0 && (
+              <span className="tabular-nums">
+                {" "}
+                · {inFicha.size} {inFicha.size === 1 ? "exercício" : "exercícios"}
+              </span>
+            )}
           </span>
-        </Link>
+          <Link
+            href={`/fichas/${ficha.id}`}
+            className="ml-auto shrink-0 py-1.5 font-bold text-ember-deep transition-colors hover:text-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          >
+            ← voltar à ficha
+          </Link>
+        </div>
       </div>
 
-      <p className="mt-4 text-[13px] text-muted">
-        {inFicha.size === 0 ? (
-          <>
-            Toque num exercício para escolher as séries e adicionar à ficha.
-          </>
-        ) : (
-          <>
-            <span className="font-bold text-ember tabular-nums">
-              {inFicha.size}
-            </span>{" "}
-            {inFicha.size === 1
-              ? "exercício nesta ficha"
-              : "exercícios nesta ficha"}{" "}
-            · toque num card para adicionar mais.
-          </>
-        )}
-      </p>
-
-      <div className="mt-5">
+      <div className="mx-auto max-w-[1240px] px-[18px] pt-[22px] pb-[70px] lg:px-10 lg:pt-[30px] lg:pb-[90px]">
         <ExerciseCatalog
           params={catalogParams}
           basePath={`/fichas/${ficha.id}/adicionar`}

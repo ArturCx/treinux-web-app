@@ -84,7 +84,9 @@ export async function setEntry(formData: FormData) {
       setNumber,
       weightKg: weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
       reps: reps !== null && Number.isInteger(reps) ? reps : null,
+      completedAt: new Date(),
     },
+    // completedAt fica só na criação: editar peso/reps depois não reconta o descanso
     update: {
       weightKg: weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
       reps: reps !== null && Number.isInteger(reps) ? reps : null,

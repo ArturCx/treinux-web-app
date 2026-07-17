@@ -51,3 +51,6 @@ AGENTS.md
 # GIFs originais do dataset (126MB): fonte para scripts/gif-to-webp.mjs.
 # O que a app serve é public/exercicios-anim/*.webp, esse sim versionado.
 /public/exercicios-gif/
+
+# cache local do hook de design (impeccable)
+.impeccable/hook.cache.json

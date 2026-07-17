@@ -4,42 +4,34 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const SECTIONS = [
-  { href: "/fichas", label: "FICHAS" },
-  { href: "/exercicios", label: "EXERCÍCIOS" },
-  { href: "/treino", label: "TREINO" },
+  { href: "/fichas", label: "Fichas" },
+  { href: "/exercicios", label: "Exercícios" },
+  { href: "/treino", label: "Treino" },
 ];
 
 /**
- * Navegação das seções com estado ativo — o sublinhado ember cresce da
- * esquerda ao entrar na seção. No mobile os links têm altura de toque (44px).
+ * Nav do masthead (§60): caps com tracking largo, item ativo em tinta com
+ * sublinhado ember de 3px. Alvo de toque generoso no mobile.
  */
 export function AppNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      aria-label="Seções"
-      className="flex items-center gap-6 text-[13px] font-medium tracking-[0.04em] lg:gap-5"
-    >
+    <nav aria-label="Seções" className="flex items-center gap-[22px]">
       {SECTIONS.map((s) => {
-        const active =
-          pathname === s.href || pathname.startsWith(`${s.href}/`);
+        const active = pathname === s.href || pathname.startsWith(`${s.href}/`);
         return (
           <Link
             key={s.href}
             href={s.href}
             aria-current={active ? "page" : undefined}
-            className={`relative flex h-11 shrink-0 items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ember lg:h-auto lg:py-1 ${
-              active ? "text-ink" : "text-muted hover:text-ink"
+            className={`shrink-0 border-b-[3px] pt-2.5 pb-3 text-[12.5px] font-bold tracking-[0.14em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ember lg:pt-3.5 lg:pb-4 ${
+              active
+                ? "border-ember text-ink"
+                : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {s.label}
-            <span
-              aria-hidden="true"
-              className={`absolute inset-x-0 bottom-0 h-0.5 origin-left bg-ember transition-transform duration-200 ease-out ${
-                active ? "scale-x-100" : "scale-x-0"
-              }`}
-            />
           </Link>
         );
       })}

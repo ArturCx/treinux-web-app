@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { fichaStats } from "@/lib/ficha-stats";
-import { startWorkout } from "../../treino/actions";
-import { ExerciseRow } from "./exercise-row";
-import { FichaHeader } from "./ficha-header";
+import { SectionLabel } from "@/components/zine";
+import { ExerciseRow, ExerciseRowGroup } from "./exercise-row";
+import { FichaCover, Housekeeping } from "./ficha-cover";
 
 export default async function FichaPage({
   params,
@@ -36,15 +36,7 @@ export default async function FichaPage({
           restSeconds: true,
           notes: true,
           exercise: {
-            select: {
-              id: true,
-              name: true,
-              namePt: true,
-              imageUrl: true,
-              bodyPart: true,
-              equipment: true,
-              target: true,
-            },
+            select: { id: true, name: true, namePt: true },
           },
         },
       },
@@ -68,11 +60,11 @@ export default async function FichaPage({
   }));
 
   const stats = fichaStats(items);
-  const isEmpty = items.length === 0;
+  const restLabel = modalRest(items);
 
   return (
-    <div className="-mx-6 -my-8 grid min-h-[calc(100dvh-101px)] lg:-mx-10 lg:-my-12 lg:min-h-[calc(100dvh-65px)] lg:grid-cols-[420px_1fr]">
-      <FichaHeader
+    <div>
+      <FichaCover
         ficha={{
           id: ficha.id,
           name: ficha.name,
@@ -81,76 +73,71 @@ export default async function FichaPage({
           updatedAt: ficha.updatedAt,
         }}
         stats={stats}
+        activeLogId={activeLog?.id ?? null}
+        restLabel={restLabel}
       />
 
-      <div className="flex flex-col">
-        {isEmpty ? (
+      <main className="mx-auto max-w-[900px] px-[18px] pt-[30px] pb-[70px] lg:px-6 lg:pt-11 lg:pb-[90px]">
+        {items.length === 0 ? (
           <EmptyExercises fichaId={ficha.id} />
         ) : (
           <>
-            {activeLog ? (
-              <Link
-                href={`/treino/${activeLog.id}`}
-                className="group flex h-14 shrink-0 items-center justify-between border-b-2 border-ember bg-ember/8 px-5 text-[15px] font-bold text-ink transition-colors hover:bg-ember/14 active:bg-ember/20 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember lg:px-8"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="inline-block size-2 animate-pulse rounded-full bg-ember" />
-                  Retomar treino
-                </span>
-                <span className="text-ember transition-transform group-hover:translate-x-0.5">
-                  →
-                </span>
-              </Link>
-            ) : (
-              <form action={startWorkout} className="shrink-0">
-                <input type="hidden" name="fichaId" value={ficha.id} />
-                <button
-                  type="submit"
-                  className="group flex h-14 w-full cursor-pointer items-center justify-between bg-ember px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ember-deep active:bg-ember-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink lg:px-8"
-                >
-                  Iniciar treino
-                  <span className="transition-transform group-hover:translate-x-0.5">
-                    →
-                  </span>
-                </button>
-              </form>
-            )}
-            <ul className="flex-1">
+            <SectionLabel title="A sequência" count={items.length} className="mb-2" />
+            <ExerciseRowGroup>
               {items.map((item, i) => (
                 <ExerciseRow
                   key={item.id}
                   item={item}
                   index={i}
-                  total={items.length}
+                  first={i === 0}
                   last={i === items.length - 1}
                 />
               ))}
-            </ul>
+            </ExerciseRowGroup>
+
             <Link
               href={`/fichas/${ficha.id}/adicionar`}
-              className="group flex h-15 shrink-0 items-center justify-between bg-ink px-5 text-[15px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember lg:px-8"
+              className="shout mt-[26px] flex min-h-[60px] items-center justify-between gap-3 border-2 border-ink bg-paper px-5 text-[18px] tracking-[0.05em] text-ink shadow-[7px_7px_0_var(--color-ember)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ember)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
-              <span>Adicionar exercício</span>
-              <span
-                aria-hidden="true"
-                className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-              >
+              Adicionar exercícios
+              <span aria-hidden="true" className="text-[22px] text-ember">
                 →
               </span>
             </Link>
           </>
         )}
-      </div>
+
+        <Housekeeping id={ficha.id} name={ficha.name} archived={ficha.archived} />
+
+      </main>
     </div>
   );
 }
 
+/** Descanso "modal" da ficha (o mais comum) para o subtítulo do CTA escuro. */
+function modalRest(items: { restSeconds: number | null }[]) {
+  const counts = new Map<number, number>();
+  for (const i of items) {
+    if (i.restSeconds !== null)
+      counts.set(i.restSeconds, (counts.get(i.restSeconds) ?? 0) + 1);
+  }
+  let best: number | null = null;
+  let bestCount = 0;
+  for (const [rest, count] of counts) {
+    if (count > bestCount) {
+      best = rest;
+      bestCount = count;
+    }
+  }
+  return best === null ? null : `${best}s`;
+}
+
 function EmptyExercises({ fichaId }: { fichaId: string }) {
   return (
-    <div className="flex flex-1 flex-col justify-center px-5 py-14 lg:px-8">
+    <div className="py-6">
       <span
         aria-hidden="true"
-        className="text-[clamp(96px,22vw,148px)] leading-[0.85] font-bold tracking-[-0.06em] text-paper-edge select-none tabular-nums"
+        className="shout block text-[clamp(96px,22vw,148px)] leading-[0.9] tracking-[-0.03em] text-paper-edge select-none tabular-nums"
       >
         0<span className="text-ember">0</span>
       </span>
@@ -159,19 +146,16 @@ function EmptyExercises({ fichaId }: { fichaId: string }) {
           Uma ficha vazia não treina ninguém.
         </h2>
         <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-muted">
-          Escolha os movimentos no catálogo — +1.300 exercícios com foto,
+          Escolha os movimentos no catálogo — +1300 exercícios com foto,
           músculos-alvo e instruções passo a passo.
         </p>
       </div>
       <Link
         href={`/fichas/${fichaId}/adicionar`}
-        className="group mt-7 flex h-15 max-w-md items-center justify-between bg-ink px-5 text-[16px] font-bold text-paper transition-colors hover:bg-ink-soft active:bg-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        className="shout mt-7 flex min-h-16 max-w-md items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
       >
-        <span>Escolher exercícios</span>
-        <span
-          aria-hidden="true"
-          className="text-[20px] text-ember transition-transform duration-200 group-hover:translate-x-1"
-        >
+        Escolher exercícios
+        <span aria-hidden="true" className="text-[22px]">
           →
         </span>
       </Link>

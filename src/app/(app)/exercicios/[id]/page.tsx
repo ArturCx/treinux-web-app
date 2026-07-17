@@ -10,9 +10,15 @@ import {
   muscleLabel,
   sentenceCase,
 } from "@/lib/catalog";
+import { Overprint, SectionLabel } from "@/components/zine";
 import { ExerciseMedia } from "./exercise-media";
 import { AddToFicha } from "./add-to-ficha";
 
+/**
+ * Página de enciclopédia do espécime (50-exercicio): prancha em duotone com
+ * ficha técnica em hairlines, execução como legendas impressas numeradas e
+ * o seletor de ficha.
+ */
 export default async function ExercicioPage({
   params,
 }: {
@@ -49,144 +55,104 @@ export default async function ExercicioPage({
     hasExercise: f.exercises.length > 0,
   }));
 
-  return (
-    <div className="mx-auto w-full max-w-5xl">
-      <Link
-        href="/exercicios"
-        className="text-[13px] font-medium text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-      >
-        ← Catálogo
-      </Link>
+  const displayName = sentenceCase(exercise.namePt ?? exercise.name);
+  const number = `Nº ${exercise.id}`;
 
-      <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-12">
-        {/* coluna esquerda: mídia + ação */}
-        <div className="flex flex-col gap-5">
+  return (
+    <div className="mx-auto max-w-[1240px] px-[18px] pt-6 pb-20 lg:grid lg:grid-cols-[520px_minmax(0,1fr)] lg:items-start lg:gap-x-14 lg:px-10 lg:pt-8 lg:pb-[100px]">
+      <div className="lg:sticky lg:top-7">
+        <Link
+          href="/exercicios"
+          className="text-[13px] font-medium text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        >
+          ← Catálogo
+        </Link>
+        <div className="mt-3.5 text-[11px] font-bold tracking-[0.16em] text-muted uppercase tabular-nums">
+          Espécime <b className="text-ember">{number}</b> ·{" "}
+          {label(BODY_PART_LABELS, exercise.bodyPart)}
+        </div>
+        <h1 className="shout mt-1 text-[38px] lg:text-[46px]">
+          <Overprint text={displayName} />
+        </h1>
+        {exercise.namePt && (
+          <p className="mt-1.5 text-[13px] text-muted italic">
+            {sentenceCase(exercise.name)}
+          </p>
+        )}
+
+        <div className="mt-[18px]">
           <ExerciseMedia
-            name={exercise.namePt ?? exercise.name}
+            name={displayName}
+            number={number}
             imageUrl={exercise.imageUrl}
             gifUrl={exercise.gifUrl}
           />
-          <div className="lg:hidden">
-            <Header exercise={exercise} />
-          </div>
-          <AddToFicha exerciseId={exercise.id} fichas={fichaOptions} />
         </div>
 
-        {/* coluna direita: identidade + instruções */}
-        <div className="flex flex-col">
-          <div className="hidden lg:block">
-            <Header exercise={exercise} />
-          </div>
-
-          <dl className="mt-6 grid grid-cols-2 border-t-2 border-ink sm:grid-cols-3">
-            <Spec label="GRUPO" value={label(BODY_PART_LABELS, exercise.bodyPart)} />
-            <Spec label="ALVO" value={label(TARGET_LABELS, exercise.target)} accent />
-            <Spec
-              label="EQUIPAMENTO"
-              value={label(EQUIPMENT_LABELS, exercise.equipment)}
-            />
-          </dl>
-
+        {/* ficha técnica */}
+        <div className="mt-[22px] border-t-2 border-ink">
+          <DataRow k="Alvo">
+            <span className="inline-block bg-ember px-2.5 py-0.5 font-bold text-paper">
+              {label(TARGET_LABELS, exercise.target)}
+            </span>
+          </DataRow>
+          <DataRow k="Equipamento">{label(EQUIPMENT_LABELS, exercise.equipment)}</DataRow>
           {exercise.secondaryMuscles.length > 0 && (
-            <div className="mt-5 flex flex-col gap-2">
-              <h2 className="text-[11px] font-medium tracking-[0.14em] text-muted">
-                MÚSCULOS SECUNDÁRIOS
-              </h2>
-              <ul className="flex flex-wrap gap-1.5">
-                {exercise.secondaryMuscles.map((m) => (
-                  <li
-                    key={m}
-                    className="border border-paper-edge px-2.5 py-1 text-[12.5px] text-muted"
-                  >
-                    {muscleLabel(m)}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <DataRow k="Secundários">
+              {exercise.secondaryMuscles.map((m) => muscleLabel(m)).join(" · ")}
+            </DataRow>
           )}
-
-          {instructions.length > 0 && (
-            <section className="mt-8">
-              <h2 className="border-b-2 border-ink pb-2 text-[11px] font-medium tracking-[0.14em] text-muted">
-                EXECUÇÃO
-              </h2>
-              <ol className="mt-1">
-                {instructions.map((step, i) => (
-                  <li
-                    key={i}
-                    className="flex gap-4 border-b border-paper-edge py-4 last:border-b-0"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="w-9 shrink-0 text-[26px] leading-none font-bold tracking-[-0.04em] text-ember tabular-nums"
-                    >
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <p className="text-[15px] leading-relaxed">{step}</p>
-                  </li>
-                ))}
-              </ol>
-              {instructionsInEnglish && (
-                <p className="mt-4 text-[12px] text-clay">
-                  Instruções em inglês, como no catálogo original.
-                </p>
-              )}
-            </section>
-          )}
+          <DataRow k="Grupo">{label(BODY_PART_LABELS, exercise.bodyPart)}</DataRow>
         </div>
       </div>
+
+      <div className="mt-9 lg:mt-0">
+        {instructions.length > 0 && (
+          <>
+            <SectionLabel title="Execução" className="mb-1.5" />
+            {instructions.map((step, i) => (
+              <div
+                key={i}
+                className={`py-[18px] pb-4 ${
+                  i === instructions.length - 1
+                    ? "border-b-2 border-ink"
+                    : "border-b border-paper-edge"
+                }`}
+              >
+                <div className="flex items-baseline gap-3.5">
+                  <span className="shout flex-none text-[20px] text-ember tabular-nums">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <p className="max-w-[520px] text-[14.5px] leading-[1.55] text-ink-soft">
+                    {step}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {instructionsInEnglish && (
+              <p className="mt-3 text-[12px] text-clay">
+                Instruções em inglês, como no catálogo original.
+              </p>
+            )}
+          </>
+        )}
+
+        <div className="mt-9">
+          <AddToFicha exerciseId={exercise.id} fichas={fichaOptions} />
+        </div>
+      </div>
+
     </div>
   );
 }
 
-function Header({
-  exercise,
-}: {
-  exercise: {
-    name: string;
-    namePt: string | null;
-    category: string;
-    muscleGroup: string | null;
-  };
-}) {
+function DataRow({ k, children }: { k: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-medium tracking-[0.14em] text-muted">
-        {label(BODY_PART_LABELS, exercise.category)}
-        {exercise.muscleGroup && ` · ${muscleLabel(exercise.muscleGroup)}`}
+    <div className="flex items-baseline gap-3.5 border-b border-paper-edge py-3">
+      <span className="w-[120px] flex-none text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
+        {k}
       </span>
-      <h1 className="text-[32px] leading-[1.02] font-bold tracking-[-0.03em] lg:text-[44px] lg:tracking-[-0.04em]">
-        {sentenceCase(exercise.namePt ?? exercise.name)}
-        <span className="text-ember">.</span>
-      </h1>
-      {exercise.namePt && (
-        <p className="text-[13px] text-muted italic">
-          {sentenceCase(exercise.name)}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Spec({
-  label,
-  value,
-  accent = false,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="border-r border-b border-paper-edge px-3 py-3 last:border-r-0">
-      <dt className="text-[10.5px] font-medium tracking-[0.1em] text-muted">
-        {label}
-      </dt>
-      <dd
-        className={`mt-1 text-[16px] leading-tight font-bold tracking-[-0.01em] ${accent ? "text-ember" : ""}`}
-      >
-        {value}
-      </dd>
+      <span className="text-[14.5px] font-medium">{children}</span>
     </div>
   );
 }

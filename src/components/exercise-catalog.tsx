@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -12,7 +11,7 @@ import {
   sentenceCase,
 } from "@/lib/catalog";
 import { CatalogSearch } from "./catalog-search";
-import { AddExerciseCard, AddExerciseGroup } from "./add-exercise-card";
+import { AddExerciseCard, AddExerciseGroup, DuotonePhoto } from "./add-exercise-card";
 
 const PAGE_SIZE = 24;
 
@@ -24,10 +23,10 @@ export type CatalogParams = {
 };
 
 /**
- * Catálogo de exercícios: busca livre + duas dimensões de filtro.
- * Músculo é chip quadrado (escolha exclusiva, visual sólido);
- * equipamento é aba sublinhada — dimensões distintas, sem competir.
- * Com `fichaId`, cada card ganha o botão de adicionar à ficha.
+ * Catálogo de espécimes (20-catalogo): busca sublinhada, chips de músculo
+ * com sombra dura no ativo, abas de equipamento, grade de hairlines com
+ * fotos em duotone de riso. Com `fichaId`, cada espécime ganha o painel
+ * de adicionar à ficha.
  */
 export async function ExerciseCatalog({
   params,
@@ -93,20 +92,17 @@ export async function ExerciseCatalog({
   };
 
   const hasFilters = Boolean(q || grupo || equip);
-  const offset = (page - 1) * PAGE_SIZE;
 
   return (
     <div className="flex flex-col">
       <div className="flex items-end justify-between gap-4">
-        <h1 className="text-[30px] leading-none font-bold tracking-[-0.03em] lg:text-[38px]">
-          Catálogo<span className="text-ember">.</span>
-        </h1>
-        <div className="text-right">
-          <div className="text-[44px] leading-[0.9] font-bold tracking-[-0.04em] text-ember tabular-nums lg:text-[56px]">
+        <h1 className="shout text-[32px] lg:text-[44px]">Catálogo</h1>
+        <div className="text-right tabular-nums">
+          <div className="shout text-[46px] leading-[0.9] tracking-[-0.02em] text-ember lg:text-[60px]">
             {hasFilters ? total : `+${Math.floor(total / 100) * 100}`}
           </div>
-          <div className="text-[10.5px] font-medium tracking-[0.1em] text-muted">
-            {hasFilters ? "RESULTADOS" : "EXERCÍCIOS"}
+          <div className="text-[10.5px] font-medium tracking-[0.12em] text-muted uppercase">
+            {hasFilters ? "Resultados" : "Exercícios"}
           </div>
         </div>
       </div>
@@ -115,8 +111,11 @@ export async function ExerciseCatalog({
         <CatalogSearch placeholder="Buscar exercício…" />
       </div>
 
-      {/* músculo: chips sólidos, rolagem horizontal no mobile */}
-      <div className="scrollbar-none -mx-6 mt-4 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
+      {/* músculo: chips com sombra dura no ativo */}
+      <div className="mt-[18px] mb-2 text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
+        Grupo muscular
+      </div>
+      <div className="scrollbar-none -mx-[18px] flex gap-2 overflow-x-auto px-[18px] pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
         <Chip href={buildHref({ grupo: "", page: "1" })} active={!grupo}>
           Todos
         </Chip>
@@ -131,8 +130,11 @@ export async function ExerciseCatalog({
         ))}
       </div>
 
-      {/* equipamento: abas sublinhadas — segunda dimensão, peso visual menor */}
-      <div className="scrollbar-none -mx-6 mt-1.5 flex gap-4 overflow-x-auto border-b-2 border-ink px-6 pt-1.5 lg:mx-0 lg:px-0">
+      {/* equipamento: abas sublinhadas — segunda dimensão, peso menor */}
+      <div className="mt-3 mb-0.5 text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
+        Equipamento
+      </div>
+      <div className="scrollbar-none -mx-[18px] flex gap-[18px] overflow-x-auto border-b-2 border-ink px-[18px] lg:mx-0 lg:px-0">
         <Tab href={buildHref({ equip: "", page: "1" })} active={!equip}>
           Todos
         </Tab>
@@ -159,96 +161,73 @@ export async function ExerciseCatalog({
       )}
 
       {exercises.length === 0 ? (
-        <div className="mt-8 border-t-2 border-ink pt-8">
-          <p className="text-[22px] leading-tight font-bold tracking-[-0.02em]">
-            Nada encontrado
-            {q && (
-              <>
-                {" "}
-                para <span className="text-ember">“{q}”</span>
-              </>
-            )}
-            .
-          </p>
-          <p className="mt-2 text-[14px] text-muted">
-            Tente outro termo — &ldquo;supino&rdquo;,
-            &ldquo;agachamento&rdquo;, &ldquo;rosca&rdquo; — ou limpe os
-            filtros.
-          </p>
+        <div className="mt-8 border-2 border-dashed border-clay px-4 py-5 text-[13.5px] text-muted">
+          Nada encontrado
+          {q && (
+            <>
+              {" "}
+              para <b className="font-bold text-ink">&ldquo;{q}&rdquo;</b>
+            </>
+          )}
+          . Tente outro nome — &ldquo;supino&rdquo;, &ldquo;agachamento&rdquo;,
+          &ldquo;rosca&rdquo; — ou{" "}
+          <Link
+            href={basePath}
+            className="inline-block py-2.5 font-bold underline underline-offset-3 hover:text-ink"
+          >
+            limpe a busca
+          </Link>
+          .
         </div>
       ) : (
         <AddExerciseGroup>
-          <ul className="mt-6 grid grid-cols-2 border-l border-paper-edge lg:grid-cols-4">
-            {exercises.map((exercise, i) => {
-              const number = `Nº ${String(offset + i + 1).padStart(3, "0")}`;
+          <ul className="mt-[22px] grid grid-cols-2 border-t border-l border-paper-edge lg:grid-cols-4">
+            {exercises.map((exercise) => {
+              const number = `Nº ${exercise.id}`;
               const displayName = sentenceCase(exercise.namePt ?? exercise.name);
               const taxonomy = `${label(BODY_PART_LABELS, exercise.bodyPart)} · ${label(TARGET_LABELS, exercise.target)}`;
-              const addable = fichaId && !inFicha.has(exercise.id);
+              const inThisFicha = Boolean(fichaId) && inFicha.has(exercise.id);
 
               return (
-                <li
-                  key={exercise.id}
-                  className="border-r border-b border-paper-edge"
-                >
-                  {addable ? (
-                    <div className="h-full p-3.5">
-                      <AddExerciseCard
-                        fichaId={fichaId}
-                        exerciseId={exercise.id}
-                        number={number}
-                        name={displayName}
-                        taxonomy={taxonomy}
-                        imageUrl={exercise.imageUrl}
-                      />
-                    </div>
+                <li key={exercise.id} className="border-r border-b border-paper-edge">
+                  {fichaId && !inThisFicha ? (
+                    <AddExerciseCard
+                      fichaId={fichaId}
+                      exerciseId={exercise.id}
+                      number={number}
+                      name={displayName}
+                      taxonomy={taxonomy}
+                      imageUrl={exercise.imageUrl}
+                    />
                   ) : (
-                    /* card inteiro é o link — o selecionado se destaca com
-                       fundo, zoom da foto e a seta deslizando */
-                    <Link
-                      href={`/exercicios/${exercise.id}`}
-                      className="group flex h-full flex-col gap-2 p-3.5 transition-colors duration-200 hover:bg-paper-deep active:bg-paper-deep focus-visible:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
-                    >
-                      <span className="flex items-baseline justify-between">
-                        <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
-                          {number}
-                        </span>
-                        {fichaId ? (
-                          <span
-                            aria-hidden="true"
-                            className="text-[13px] leading-none font-bold text-ember"
-                          >
-                            ✓
-                          </span>
-                        ) : (
-                          <span
-                            aria-hidden="true"
-                            className="-translate-x-1 text-[18px] leading-none font-bold text-ember opacity-0 transition-all duration-200 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
-                          >
-                            →
-                          </span>
-                        )}
-                      </span>
-
-                      <span className="overflow-hidden">
-                        <Image
-                          src={exercise.imageUrl}
-                          alt=""
-                          width={200}
-                          height={200}
-                          className="aspect-square w-full bg-paper-edge object-cover transition-transform duration-300 ease-out group-hover:scale-[1.05] group-focus-visible:scale-[1.05]"
-                        />
-                      </span>
-                      <h3 className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
+                    <article className="flex h-full flex-col bg-paper">
+                      <div className="px-3 pt-2.5 pb-2 text-[10px] font-bold tracking-[0.14em] text-clay uppercase tabular-nums">
+                        {number}
+                      </div>
+                      <DuotonePhoto imageUrl={exercise.imageUrl} />
+                      <h3 className="px-3 pt-2.5 text-[15px] leading-[1.2] font-bold tracking-[-0.01em] lg:text-[16px]">
                         {displayName}
                       </h3>
-                      <p className="text-[12px] text-muted">{taxonomy}</p>
-
-                      {fichaId && (
-                        <span className="mt-auto pt-1 text-[12.5px] font-bold text-ember">
-                          Já na ficha
-                        </span>
-                      )}
-                    </Link>
+                      <div className="px-3 pt-0.5 text-[11.5px] text-muted">{taxonomy}</div>
+                      <div className="mt-auto p-3">
+                        {inThisFicha ? (
+                          /* única ocorrência do rosa fluo desta tela */
+                          <div className="flex min-h-12 items-center justify-center bg-ember text-[13px] font-bold tracking-[0.04em] text-paper">
+                            ✓ Já na ficha
+                          </div>
+                        ) : (
+                          <Link
+                            href={`/exercicios/${exercise.id}`}
+                            className="flex min-h-12 w-full items-center justify-between border border-ink bg-paper px-3 text-[14px] font-bold transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+                          >
+                            Ver exercício
+                            <i aria-hidden="true" className="text-ember not-italic">
+                              →
+                            </i>
+                          </Link>
+                        )}
+                      </div>
+                    </article>
                   )}
                 </li>
               );
@@ -264,22 +243,16 @@ export async function ExerciseCatalog({
       {pages > 1 && (
         <nav
           aria-label="Paginação"
-          className="mt-6 flex items-center justify-between border-t-2 border-ink pt-4"
+          className="mt-6 flex items-center justify-between border-t-2 border-ink pt-3"
         >
-          <PageLink
-            href={buildHref({ page: String(page - 1) })}
-            disabled={page === 1}
-          >
+          <PageLink href={buildHref({ page: String(page - 1) })} disabled={page === 1}>
             ← Anterior
           </PageLink>
           <span className="text-[13px] font-medium text-muted tabular-nums">
-            {page} / {pages}
+            pág. <b className="font-bold text-ink">{page}</b> / {pages} da edição
           </span>
-          <PageLink
-            href={buildHref({ page: String(page + 1) })}
-            disabled={page === pages}
-          >
-            Próxima →
+          <PageLink href={buildHref({ page: String(page + 1) })} disabled={page === pages}>
+            Próxima <i className="text-ember not-italic">→</i>
           </PageLink>
         </nav>
       )}
@@ -301,10 +274,10 @@ function Chip({
       href={href}
       scroll={false}
       aria-current={active ? "true" : undefined}
-      className={`flex h-11 shrink-0 items-center border px-4 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember ${
+      className={`flex h-12 shrink-0 items-center border border-ink px-[15px] text-[14px] font-medium whitespace-nowrap transition-[background-color,box-shadow,color] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember ${
         active
-          ? "border-ink bg-ink text-paper"
-          : "border-ink text-ink hover:bg-ink/5 active:bg-ink/10"
+          ? "bg-ink text-paper shadow-[3px_3px_0_var(--color-ember)]"
+          : "bg-paper text-ink hover:shadow-[3px_3px_0_var(--color-riso)]"
       }`}
     >
       {children}
@@ -326,10 +299,10 @@ function Tab({
       href={href}
       scroll={false}
       aria-current={active ? "true" : undefined}
-      className={`flex h-10 shrink-0 items-center border-b-2 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember ${
+      className={`flex h-12 shrink-0 items-center border-b-[3px] text-[14px] whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember ${
         active
-          ? "border-ember text-ink"
-          : "border-transparent text-muted hover:text-ink"
+          ? "border-ember font-bold text-ink"
+          : "border-transparent font-medium text-muted hover:text-ink"
       }`}
     >
       {children}
@@ -348,7 +321,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="flex h-11 items-center text-[13px] font-medium text-clay opacity-40">
+      <span className="flex h-12 items-center px-1 text-[14px] font-medium text-clay">
         {children}
       </span>
     );
@@ -357,7 +330,7 @@ function PageLink({
     <Link
       href={href}
       scroll={false}
-      className="flex h-11 items-center text-[13px] font-medium transition-colors hover:text-ember active:text-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+      className="flex h-12 items-center px-1 text-[14px] font-bold transition-colors hover:text-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
     >
       {children}
     </Link>

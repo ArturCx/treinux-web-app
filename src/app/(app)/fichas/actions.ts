@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
+import { sentenceCase } from "@/lib/catalog";
 
 export type ActionState = { error?: string } | null;
 
@@ -240,25 +241,61 @@ export async function updatePrescription(
   return null;
 }
 
+export type ReplaceState = {
+  swapped?: {
+    itemId: string;
+    newName: string;
+    prevExerciseId: string;
+    prevNotes: string;
+  };
+} | null;
+
 /**
  * Troca o exercício por outro sorteado do mesmo membro (bodyPart), mantendo
  * posição e prescrição. Prefere o mesmo equipamento — ficha de calistenia
  * recebe outro exercício de peso corporal — e abre para o membro inteiro se
  * não houver opção. A observação é limpa: ela descrevia o exercício antigo.
+ *
+ * Uma só action para os dois sentidos: com `restoreTo` no form, desfaz a troca
+ * (volta exercício + observação anteriores) e retorna null; senão, sorteia e
+ * retorna o que trocou, para o card oferecer "desfazer".
  */
-export async function replaceExercise(formData: FormData) {
+export async function replaceExercise(
+  _prev: ReplaceState,
+  formData: FormData,
+): Promise<ReplaceState> {
   const session = await requireSession();
   const itemId = String(formData.get("itemId") ?? "");
+  const restoreTo = String(formData.get("restoreTo") ?? "");
 
   const item = await prisma.fichaExercise.findFirst({
     where: { id: itemId, ficha: { userId: session.user.id } },
     select: {
       id: true,
       fichaId: true,
+      exerciseId: true,
+      notes: true,
       exercise: { select: { bodyPart: true, equipment: true } },
     },
   });
   if (!item) throw new Error("Exercício não encontrado na ficha.");
+
+  // desfazer: restaura o exercício e a observação anteriores
+  if (restoreTo) {
+    const restoreNotes = String(formData.get("restoreNotes") ?? "");
+    const prev = await prisma.exercise.findUnique({
+      where: { id: restoreTo },
+      select: { id: true },
+    });
+    if (prev) {
+      await prisma.fichaExercise.update({
+        where: { id: item.id },
+        data: { exerciseId: restoreTo, notes: restoreNotes || null },
+      });
+      revalidatePath(`/fichas/${item.fichaId}`);
+    }
+    return null;
+  }
 
   const inFicha = await prisma.fichaExercise.findMany({
     where: { fichaId: item.fichaId },
@@ -271,13 +308,18 @@ export async function replaceExercise(formData: FormData) {
   };
   let candidatos = await prisma.exercise.findMany({
     where: { ...base, equipment: item.exercise.equipment },
-    select: { id: true },
+    select: { id: true, name: true, namePt: true },
   });
   if (candidatos.length === 0)
-    candidatos = await prisma.exercise.findMany({ where: base, select: { id: true } });
-  if (candidatos.length === 0) return; // membro esgotado — nada a trocar
+    candidatos = await prisma.exercise.findMany({
+      where: base,
+      select: { id: true, name: true, namePt: true },
+    });
+  if (candidatos.length === 0) return null; // membro esgotado — nada a trocar
 
   const sorteado = candidatos[Math.floor(Math.random() * candidatos.length)];
+  const prevExerciseId = item.exerciseId;
+  const prevNotes = item.notes ?? "";
 
   await prisma.fichaExercise.update({
     where: { id: item.id },
@@ -285,6 +327,15 @@ export async function replaceExercise(formData: FormData) {
   });
 
   revalidatePath(`/fichas/${item.fichaId}`);
+
+  return {
+    swapped: {
+      itemId,
+      newName: sentenceCase(sorteado.namePt ?? sorteado.name),
+      prevExerciseId,
+      prevNotes,
+    },
+  };
 }
 
 /** Move um exercício uma posição para cima ou para baixo, trocando com o vizinho. */

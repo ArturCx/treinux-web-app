@@ -10,7 +10,7 @@ export default async function ExerciciosPage({
   const params = await searchParams;
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="mx-auto max-w-[1240px] px-[18px] pt-[22px] pb-[70px] lg:px-10 lg:pt-[30px] lg:pb-[90px]">
       <ExerciseCatalog params={params} basePath="/exercicios" />
     </div>
   );
