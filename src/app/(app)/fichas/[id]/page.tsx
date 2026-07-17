@@ -97,7 +97,7 @@ export default async function FichaPage({
 
             <Link
               href={`/fichas/${ficha.id}/adicionar`}
-              className="shout mt-[26px] flex min-h-[60px] items-center justify-between gap-3 border-2 border-ink bg-paper px-5 text-[18px] tracking-[0.05em] text-ink shadow-[7px_7px_0_var(--color-ember)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ember)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+              className="shout mt-[26px] flex min-h-[60px] items-center justify-between gap-3 border-2 border-ink bg-paper px-5 text-[18px] tracking-[0.05em] text-ink shadow-[7px_7px_0_var(--color-ember)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ember)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ember)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
               Adicionar exercícios
               <span aria-hidden="true" className="text-[22px] text-ember">
@@ -152,7 +152,7 @@ function EmptyExercises({ fichaId }: { fichaId: string }) {
       </div>
       <Link
         href={`/fichas/${fichaId}/adicionar`}
-        className="shout mt-7 flex min-h-16 max-w-md items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+        className="shout mt-7 flex min-h-16 max-w-md items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
       >
         Escolher exercícios
         <span aria-hidden="true" className="text-[22px]">

@@ -424,9 +424,9 @@ function Dock({ logId, sessionSeconds }: { logId: string; sessionSeconds: number
           <input type="hidden" name="logId" value={logId} />
           <button
             type="submit"
-            className="min-h-12 cursor-pointer border border-amber bg-transparent px-[22px] font-mono text-[14px] font-bold tracking-[0.05em] text-amber transition-colors hover:bg-amber hover:text-coal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+            className="min-h-12 cursor-pointer border border-amber bg-transparent px-4 font-mono text-[14px] font-bold tracking-[0.05em] text-amber transition-colors hover:bg-amber hover:text-coal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber sm:px-[22px]"
           >
-            Finalizar treino ■
+            Finalizar<span className="hidden sm:inline"> treino</span> ■
           </button>
         </form>
       </div>

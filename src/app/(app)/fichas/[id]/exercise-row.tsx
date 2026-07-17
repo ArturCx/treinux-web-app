@@ -206,7 +206,7 @@ export function ExerciseRow({
                   <button
                     type="submit"
                     disabled={pending}
-                    className="flex min-h-[50px] cursor-pointer items-center gap-2.5 bg-ink px-6 text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] disabled:cursor-default disabled:bg-clay disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+                    className="flex min-h-[50px] cursor-pointer items-center gap-2.5 bg-ink px-6 text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[3px_3px_0_var(--color-riso)] disabled:cursor-default disabled:bg-clay disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
                   >
                     {pending && (
                       <span

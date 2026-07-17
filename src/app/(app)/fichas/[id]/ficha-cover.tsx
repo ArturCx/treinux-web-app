@@ -108,7 +108,7 @@ export function FichaCover({
               (activeLogId ? (
                 <Link
                   href={`/treino/${activeLogId}`}
-                  className="shout relative z-[2] mt-5 flex w-full max-w-[520px] min-h-16 items-center justify-between gap-3.5 bg-coal px-5 text-[20px] tracking-[0.06em] text-dtext shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+                  className="shout relative z-[2] mt-5 flex w-full max-w-[520px] min-h-16 items-center justify-between gap-3.5 bg-coal px-4 text-[18px] tracking-[0.06em] sm:px-5 sm:text-[20px] text-dtext shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
                 >
                   <span>
                     <span className="text-amber">●</span> Retomar treino
@@ -122,7 +122,7 @@ export function FichaCover({
                   <input type="hidden" name="fichaId" value={ficha.id} />
                   <button
                     type="submit"
-                    className="shout mt-5 flex w-full max-w-[520px] min-h-16 cursor-pointer items-center justify-between gap-3.5 bg-coal px-5 text-[20px] tracking-[0.06em] text-dtext shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+                    className="shout mt-5 flex w-full max-w-[520px] min-h-16 cursor-pointer items-center justify-between gap-3.5 bg-coal px-4 text-[18px] tracking-[0.06em] sm:px-5 sm:text-[20px] text-dtext shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
                   >
                     <span>
                       <span className="text-amber">●</span> Iniciar treino
@@ -207,7 +207,7 @@ function EditForm({ ficha, onDone }: { ficha: Ficha; onDone: () => void }) {
         <button
           type="submit"
           disabled={pending}
-          className="flex min-h-[50px] cursor-pointer items-center gap-2.5 bg-ink px-6 text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] disabled:cursor-default disabled:bg-clay disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+          className="flex min-h-[50px] cursor-pointer items-center gap-2.5 bg-ink px-6 text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[3px_3px_0_var(--color-riso)] disabled:cursor-default disabled:bg-clay disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
         >
           {pending && (
             <span

@@ -252,7 +252,7 @@ export function GeneratorForm() {
         <button
           type="submit"
           disabled={pending || selected.size === 0}
-          className="shout mt-[26px] flex min-h-16 w-full cursor-pointer items-center justify-between gap-3.5 border-2 border-ink bg-ember px-5 text-[20px] tracking-[0.06em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] disabled:cursor-default disabled:border-clay disabled:bg-clay disabled:shadow-none lg:mt-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="shout mt-[26px] flex min-h-16 w-full cursor-pointer items-center justify-between gap-3.5 border-2 border-ink bg-ember px-5 text-[20px] tracking-[0.06em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] disabled:cursor-default disabled:border-clay disabled:bg-clay disabled:shadow-none lg:mt-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           <span className="flex items-center gap-3">
             {pending && (

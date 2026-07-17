@@ -225,16 +225,16 @@ export function SessionPrint({
           <tbody>
             {data.rows.map((r) => (
               <tr key={r.exerciseId}>
-                <td className="border-b border-paper-edge py-2.5 pr-2 align-baseline text-[13.5px] font-bold tracking-[-0.01em]">
+                <td className="w-full border-b border-paper-edge py-2.5 pr-2 align-baseline text-[13.5px] font-bold tracking-[-0.01em]">
                   {r.name}
                 </td>
                 <td className="border-b border-paper-edge py-2.5 pr-2 align-baseline font-mono text-[12.5px] whitespace-nowrap text-ink-soft tabular-nums">
                   <b className="font-bold text-ink">{r.done}</b>/{r.prescribed}
                 </td>
-                <td className="border-b border-paper-edge py-2.5 pr-2 align-baseline font-mono text-[12.5px] whitespace-nowrap text-ink-soft tabular-nums">
+                <td className="border-b border-paper-edge py-2.5 pr-2 align-baseline font-mono text-[12.5px] text-ink-soft tabular-nums">
                   {r.reps}
                 </td>
-                <td className="border-b border-paper-edge py-2.5 text-right align-baseline font-mono text-[12.5px] whitespace-nowrap text-ink-soft tabular-nums">
+                <td className="border-b border-paper-edge py-2.5 text-right align-baseline font-mono text-[12.5px] text-ink-soft tabular-nums">
                   {r.weight}
                 </td>
               </tr>
@@ -269,7 +269,7 @@ export function SessionPrint({
           {data.fichaId && (
             <Link
               href={`/fichas/${data.fichaId}`}
-              className="flex min-h-[52px] items-center gap-2 bg-ink px-[22px] text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+              className="flex min-h-[52px] items-center gap-2 bg-ink px-[22px] text-[14.5px] font-bold text-paper shadow-[5px_5px_0_var(--color-riso)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-riso)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[3px_3px_0_var(--color-riso)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
               Ver ficha <i className="text-ember not-italic">→</i>
             </Link>

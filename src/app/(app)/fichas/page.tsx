@@ -102,7 +102,9 @@ export default async function FichasPage() {
             return (
               <article
                 key={ficha.id}
-                className={`relative border-2 border-ink bg-paper px-4 pt-[18px] transition-transform duration-200 ease-out ${
+                // entrada escalonada: cada card "assenta" logo após o anterior
+                style={{ animationDelay: `${Math.min(i, 6) * 55}ms` }}
+                className={`animate-rise relative border-2 border-ink bg-paper px-4 pt-[18px] transition-transform duration-200 ease-out ${
                   blue
                     ? "shadow-[7px_7px_0_var(--color-riso)] hover:-rotate-1"
                     : "shadow-[7px_7px_0_var(--color-ember)] hover:rotate-1"
@@ -154,7 +156,7 @@ export default async function FichasPage() {
         <div className="mt-[38px] flex flex-col gap-4 lg:sticky lg:top-7 lg:mt-6">
           <Link
             href="/fichas/nova"
-            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             Nova ficha
             <span aria-hidden="true" className="text-[22px]">
@@ -277,7 +279,7 @@ function FirstRun() {
         <div className="mt-8 flex max-w-md flex-col gap-4">
           <Link
             href="/fichas/nova"
-            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="shout flex min-h-16 items-center justify-between gap-3 border-2 border-ink bg-ember px-5 text-[19px] tracking-[0.05em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             Criar primeira ficha
             <span aria-hidden="true" className="text-[22px]">
