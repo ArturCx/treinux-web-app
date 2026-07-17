@@ -32,6 +32,9 @@ type SetState = { done: boolean; weight: string; reps: string; justLit?: boolean
 const key = (exerciseId: string, setNumber: number) => `${exerciseId}-${setNumber}`;
 const DEFAULT_REST = 90;
 
+/** Reps "exata" = número puro (ex.: "10"); faixas/AMRAP/"25 seg" ficam vazias. */
+const exactReps = (reps: string) => (/^\d+$/.test(reps.trim()) ? reps.trim() : "");
+
 export function WorkoutSession({
   logId,
   fichaName,
@@ -58,11 +61,26 @@ export function WorkoutSession({
           : {
               done: false,
               weight: ex.weightKg !== null ? String(ex.weightKg) : "",
-              reps: "",
+              // reps já vêm preenchidas quando a prescrição é um número exato
+              reps: exactReps(ex.reps),
             };
       }
     }
     return init;
+  });
+
+  // bloco "em execução" = o que o usuário selecionou (ordem livre); começa no
+  // primeiro exercício com série pendente, mas pode ser trocado a qualquer hora
+  const [selectedId, setSelectedId] = useState<string>(() => {
+    const doneKeys = new Set(
+      initialEntries.map((e) => key(e.exerciseId, e.setNumber)),
+    );
+    const firstPending = exercises.find((ex) =>
+      Array.from({ length: ex.sets }).some(
+        (_, i) => !doneKeys.has(key(ex.exerciseId, i + 1)),
+      ),
+    );
+    return (firstPending ?? exercises[0])?.exerciseId ?? "";
   });
 
   // cronômetro de descanso: conta a partir do registro da série rumo ao alvo
@@ -90,11 +108,6 @@ export function WorkoutSession({
     const done = Object.values(state).filter((s) => s.done).length;
     return { total, done };
   }, [state, exercises]);
-
-  // exercício "em execução" = o primeiro com série pendente
-  const activeIndex = exercises.findIndex((ex) =>
-    Array.from({ length: ex.sets }).some((_, i) => !state[key(ex.exerciseId, i + 1)]?.done),
-  );
 
   function persist(exerciseId: string, setNumber: number, s: SetState) {
     const fd = new FormData();
@@ -126,6 +139,7 @@ export function WorkoutSession({
     const k = key(ex.exerciseId, setNumber);
     const next = { ...state[k], done: !state[k].done, justLit: !state[k].done };
     setState((prev) => ({ ...prev, [k]: next }));
+    setSelectedId(ex.exerciseId); // registrar uma série passa o foco pra ela
     persist(ex.exerciseId, setNumber, next);
     if (next.done) {
       // registrar série liga o cronômetro com o alvo do exercício
@@ -285,26 +299,27 @@ export function WorkoutSession({
             </p>
           )}
 
-          {exercises.map((ex, exIndex) => {
+          {exercises.map((ex) => {
             const doneCount = Array.from({ length: ex.sets }).filter(
               (_, i) => state[key(ex.exerciseId, i + 1)]?.done,
             ).length;
             const exDone = doneCount === ex.sets;
-            const isActive = exIndex === activeIndex;
+            const isActive = ex.exerciseId === selectedId;
 
             return (
               <article
                 key={ex.exerciseId}
-                className={`relative mt-4 border bg-panel px-3.5 pt-4 pb-4 ${
-                  isActive ? "border-amber" : "border-dedge"
-                } ${!isActive && !exDone ? "opacity-[0.62]" : ""}`}
+                onClick={() => setSelectedId(ex.exerciseId)}
+                className={`relative mt-4 border bg-panel px-3.5 pt-4 pb-4 transition-colors ${
+                  isActive ? "border-amber" : "border-dedge hover:border-dmut"
+                }`}
               >
                 <span
                   className={`absolute -top-[9px] left-3 bg-coal px-2 text-[10px] font-bold tracking-[0.18em] uppercase ${
                     isActive ? "text-amber" : exDone ? "text-phos" : "text-dmut"
                   }`}
                 >
-                  {isActive ? "Em execução" : exDone ? "Concluído" : "Na fila"}
+                  {isActive ? "Em execução" : exDone ? "Concluído" : "Pendente"}
                 </span>
 
                 <div className="flex items-baseline justify-between gap-3">
