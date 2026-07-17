@@ -12,7 +12,7 @@ import {
   sentenceCase,
 } from "@/lib/catalog";
 import { CatalogSearch } from "./catalog-search";
-import { AddExerciseCard } from "./add-exercise-card";
+import { AddExerciseCard, AddExerciseGroup } from "./add-exercise-card";
 
 const PAGE_SIZE = 24;
 
@@ -177,82 +177,84 @@ export async function ExerciseCatalog({
           </p>
         </div>
       ) : (
-        <ul className="mt-6 grid grid-cols-2 border-l border-paper-edge lg:grid-cols-4">
-          {exercises.map((exercise, i) => {
-            const number = `Nº ${String(offset + i + 1).padStart(3, "0")}`;
-            const displayName = sentenceCase(exercise.namePt ?? exercise.name);
-            const taxonomy = `${label(BODY_PART_LABELS, exercise.bodyPart)} · ${label(TARGET_LABELS, exercise.target)}`;
-            const addable = fichaId && !inFicha.has(exercise.id);
+        <AddExerciseGroup>
+          <ul className="mt-6 grid grid-cols-2 border-l border-paper-edge lg:grid-cols-4">
+            {exercises.map((exercise, i) => {
+              const number = `Nº ${String(offset + i + 1).padStart(3, "0")}`;
+              const displayName = sentenceCase(exercise.namePt ?? exercise.name);
+              const taxonomy = `${label(BODY_PART_LABELS, exercise.bodyPart)} · ${label(TARGET_LABELS, exercise.target)}`;
+              const addable = fichaId && !inFicha.has(exercise.id);
 
-            return (
-              <li
-                key={exercise.id}
-                className="border-r border-b border-paper-edge"
-              >
-                {addable ? (
-                  <div className="h-full p-3.5">
-                    <AddExerciseCard
-                      fichaId={fichaId}
-                      exerciseId={exercise.id}
-                      number={number}
-                      name={displayName}
-                      taxonomy={taxonomy}
-                      imageUrl={exercise.imageUrl}
-                    />
-                  </div>
-                ) : (
-                  /* card inteiro é o link — o selecionado se destaca com
-                     fundo, zoom da foto e a seta deslizando */
-                  <Link
-                    href={`/exercicios/${exercise.id}`}
-                    className="group flex h-full flex-col gap-2 p-3.5 transition-colors duration-200 hover:bg-paper-deep active:bg-paper-deep focus-visible:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
-                  >
-                    <span className="flex items-baseline justify-between">
-                      <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
-                        {number}
-                      </span>
-                      {fichaId ? (
-                        <span
-                          aria-hidden="true"
-                          className="text-[13px] leading-none font-bold text-ember"
-                        >
-                          ✓
+              return (
+                <li
+                  key={exercise.id}
+                  className="border-r border-b border-paper-edge"
+                >
+                  {addable ? (
+                    <div className="h-full p-3.5">
+                      <AddExerciseCard
+                        fichaId={fichaId}
+                        exerciseId={exercise.id}
+                        number={number}
+                        name={displayName}
+                        taxonomy={taxonomy}
+                        imageUrl={exercise.imageUrl}
+                      />
+                    </div>
+                  ) : (
+                    /* card inteiro é o link — o selecionado se destaca com
+                       fundo, zoom da foto e a seta deslizando */
+                    <Link
+                      href={`/exercicios/${exercise.id}`}
+                      className="group flex h-full flex-col gap-2 p-3.5 transition-colors duration-200 hover:bg-paper-deep active:bg-paper-deep focus-visible:bg-paper-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ember"
+                    >
+                      <span className="flex items-baseline justify-between">
+                        <span className="text-[10.5px] font-medium tracking-[0.1em] text-clay tabular-nums">
+                          {number}
                         </span>
-                      ) : (
-                        <span
-                          aria-hidden="true"
-                          className="-translate-x-1 text-[18px] leading-none font-bold text-ember opacity-0 transition-all duration-200 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
-                        >
-                          →
+                        {fichaId ? (
+                          <span
+                            aria-hidden="true"
+                            className="text-[13px] leading-none font-bold text-ember"
+                          >
+                            ✓
+                          </span>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="-translate-x-1 text-[18px] leading-none font-bold text-ember opacity-0 transition-all duration-200 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+                          >
+                            →
+                          </span>
+                        )}
+                      </span>
+
+                      <span className="overflow-hidden">
+                        <Image
+                          src={exercise.imageUrl}
+                          alt=""
+                          width={200}
+                          height={200}
+                          className="aspect-square w-full bg-paper-edge object-cover transition-transform duration-300 ease-out group-hover:scale-[1.05] group-focus-visible:scale-[1.05]"
+                        />
+                      </span>
+                      <h3 className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
+                        {displayName}
+                      </h3>
+                      <p className="text-[12px] text-muted">{taxonomy}</p>
+
+                      {fichaId && (
+                        <span className="mt-auto pt-1 text-[12.5px] font-bold text-ember">
+                          Já na ficha
                         </span>
                       )}
-                    </span>
-
-                    <span className="overflow-hidden">
-                      <Image
-                        src={exercise.imageUrl}
-                        alt=""
-                        width={200}
-                        height={200}
-                        className="aspect-square w-full bg-paper-edge object-cover transition-transform duration-300 ease-out group-hover:scale-[1.05] group-focus-visible:scale-[1.05]"
-                      />
-                    </span>
-                    <h3 className="text-[15px] leading-[1.2] font-bold tracking-[-0.01em] group-hover:underline group-hover:decoration-ember group-hover:underline-offset-2">
-                      {displayName}
-                    </h3>
-                    <p className="text-[12px] text-muted">{taxonomy}</p>
-
-                    {fichaId && (
-                      <span className="mt-auto pt-1 text-[12.5px] font-bold text-ember">
-                        Já na ficha
-                      </span>
-                    )}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </AddExerciseGroup>
       )}
 
       <p className="mt-6 text-[11px] text-clay">

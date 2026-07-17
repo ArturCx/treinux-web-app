@@ -162,8 +162,9 @@ function FichaList({
               </div>
             </Link>
 
-            {/* atalho de exclusão por cima do link da linha */}
-            <div className="absolute top-4 right-1 z-10">
+            {/* atalho de exclusão na base direita, alinhado com as stats —
+                o topo direito pertence ao numeral de impresso */}
+            <div className="absolute right-1 bottom-2 z-10">
               <QuickDelete id={ficha.id} name={ficha.name} />
             </div>
           </li>

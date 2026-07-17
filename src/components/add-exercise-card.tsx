@@ -1,11 +1,27 @@
 "use client";
 
-import { useId, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { addExercise } from "@/app/(app)/fichas/actions";
 import { SetsStepper } from "./sets-stepper";
+
+const OpenCardContext = createContext<{
+  openId: string | null;
+  setOpenId: (id: string | null) => void;
+} | null>(null);
+
+/**
+ * Coordena os cards de adição do grid: guarda o id do único card expandido,
+ * então abrir um fecha o anterior.
+ */
+export function AddExerciseGroup({ children }: { children: React.ReactNode }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  return (
+    <OpenCardContext value={{ openId, setOpenId }}>{children}</OpenCardContext>
+  );
+}
 
 /**
  * Card do catálogo no contexto de uma ficha: tocar no card expande o painel
@@ -27,7 +43,11 @@ export function AddExerciseCard({
   taxonomy: string;
   imageUrl: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const group = useContext(OpenCardContext);
+  const [soloOpen, setSoloOpen] = useState(false);
+  const open = group ? group.openId === exerciseId : soloOpen;
+  const toggle = () =>
+    group ? group.setOpenId(open ? null : exerciseId) : setSoloOpen(!open);
   const [sets, setSets] = useState(3);
   const panelId = useId();
 
@@ -35,7 +55,7 @@ export function AddExerciseCard({
     <div className="flex h-full flex-col">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-expanded={open}
         aria-controls={panelId}
         className="group flex cursor-pointer flex-col gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"

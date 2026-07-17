@@ -69,9 +69,9 @@ function Stamp() {
           strokeWidth="1.5"
         />
         <circle cx="72" cy="72" r="38" fill="none" stroke="#d14b24" strokeWidth="1" />
-        <text className="fill-ember text-[13.5px] font-semibold tracking-[0.28em]">
+        <text className="fill-ember text-[13.5px] font-semibold tracking-[0.24em]">
           <textPath href="#stamp-circle">
-            200 EXERCÍCIOS · CATÁLOGO COMPLETO · TREINUX ·
+            +1300 EXERCÍCIOS · CATÁLOGO COMPLETO · TREINUX ·
           </textPath>
         </text>
       </svg>

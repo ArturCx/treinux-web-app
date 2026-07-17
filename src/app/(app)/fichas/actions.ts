@@ -240,6 +240,53 @@ export async function updatePrescription(
   return null;
 }
 
+/**
+ * Troca o exercício por outro sorteado do mesmo membro (bodyPart), mantendo
+ * posição e prescrição. Prefere o mesmo equipamento — ficha de calistenia
+ * recebe outro exercício de peso corporal — e abre para o membro inteiro se
+ * não houver opção. A observação é limpa: ela descrevia o exercício antigo.
+ */
+export async function replaceExercise(formData: FormData) {
+  const session = await requireSession();
+  const itemId = String(formData.get("itemId") ?? "");
+
+  const item = await prisma.fichaExercise.findFirst({
+    where: { id: itemId, ficha: { userId: session.user.id } },
+    select: {
+      id: true,
+      fichaId: true,
+      exercise: { select: { bodyPart: true, equipment: true } },
+    },
+  });
+  if (!item) throw new Error("Exercício não encontrado na ficha.");
+
+  const inFicha = await prisma.fichaExercise.findMany({
+    where: { fichaId: item.fichaId },
+    select: { exerciseId: true },
+  });
+
+  const base = {
+    bodyPart: item.exercise.bodyPart,
+    id: { notIn: inFicha.map((e) => e.exerciseId) },
+  };
+  let candidatos = await prisma.exercise.findMany({
+    where: { ...base, equipment: item.exercise.equipment },
+    select: { id: true },
+  });
+  if (candidatos.length === 0)
+    candidatos = await prisma.exercise.findMany({ where: base, select: { id: true } });
+  if (candidatos.length === 0) return; // membro esgotado — nada a trocar
+
+  const sorteado = candidatos[Math.floor(Math.random() * candidatos.length)];
+
+  await prisma.fichaExercise.update({
+    where: { id: item.id },
+    data: { exerciseId: sorteado.id, notes: null },
+  });
+
+  revalidatePath(`/fichas/${item.fichaId}`);
+}
+
 /** Move um exercício uma posição para cima ou para baixo, trocando com o vizinho. */
 export async function moveExercise(formData: FormData) {
   const session = await requireSession();

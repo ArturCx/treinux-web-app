@@ -11,7 +11,12 @@ import {
   sentenceCase,
 } from "@/lib/catalog";
 import { initials } from "@/lib/ficha-stats";
-import { moveExercise, removeExercise, updatePrescription } from "../actions";
+import {
+  moveExercise,
+  removeExercise,
+  replaceExercise,
+  updatePrescription,
+} from "../actions";
 
 export type RowItem = {
   id: string;
@@ -126,11 +131,23 @@ export function ExerciseRow({
               {formatRest(item.restSeconds)} descanso
             </span>
           )}
+          {/* sorteia outro exercício do mesmo membro no lugar deste */}
+          <form action={replaceExercise} className="ml-auto">
+            <input type="hidden" name="itemId" value={item.id} />
+            <button
+              type="submit"
+              title="Trocar por outro exercício do mesmo membro"
+              aria-label={`Trocar ${displayName} por outro exercício do mesmo membro`}
+              className="h-11 cursor-pointer px-1 text-[13px] font-medium text-muted underline-offset-3 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            >
+              Trocar
+            </button>
+          </form>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className="ml-auto h-11 cursor-pointer px-1 text-[13px] font-medium text-muted underline-offset-3 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            className="h-11 cursor-pointer px-1 text-[13px] font-medium text-muted underline-offset-3 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             {open ? "Fechar" : "Editar"}
           </button>
