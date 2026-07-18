@@ -62,6 +62,12 @@ export const EQUIPMENT_LABELS: Record<string, string> = {
   "upper body ergometer": "Ergômetro de braço",
 };
 
+/**
+ * Equipamentos sem carga externa: o peso vem do próprio corpo. No modo treino,
+ * exercícios com esse equipamento já entram com o campo de peso em N/A.
+ */
+export const BODYWEIGHT_EQUIPMENT = new Set(["body weight"]);
+
 /** Músculos-alvo, usados na linha da ficha e no card. */
 export const TARGET_LABELS: Record<string, string> = {
   abs: "Abdômen",

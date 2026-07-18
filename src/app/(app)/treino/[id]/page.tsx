@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { sentenceCase } from "@/lib/catalog";
+import {
+  BODYWEIGHT_EQUIPMENT,
+  EQUIPMENT_LABELS,
+  TARGET_LABELS,
+  label,
+  sentenceCase,
+} from "@/lib/catalog";
 import { SessionPrint, loadSessionPrint } from "../session-print";
 import { WorkoutSession } from "./workout-session";
 
@@ -32,7 +38,16 @@ export default async function TreinoPage({
               reps: true,
               weightKg: true,
               restSeconds: true,
-              exercise: { select: { name: true, namePt: true } },
+              exercise: {
+                select: {
+                  name: true,
+                  namePt: true,
+                  equipment: true,
+                  target: true,
+                  instructions: true,
+                  instructionsPt: true,
+                },
+              },
             },
           },
         },
@@ -65,14 +80,22 @@ export default async function TreinoPage({
   }
 
   // Sessão ao vivo = o instrumento (língua telemetria, 04-telemetria-v2).
-  const exercises = (log.ficha?.exercises ?? []).map((fe) => ({
-    exerciseId: fe.exerciseId,
-    name: sentenceCase(fe.exercise.namePt ?? fe.exercise.name),
-    sets: fe.sets,
-    reps: fe.reps,
-    weightKg: fe.weightKg === null ? null : Number(fe.weightKg),
-    restSeconds: fe.restSeconds,
-  }));
+  const exercises = (log.ficha?.exercises ?? []).map((fe) => {
+    const instructionsPt = fe.exercise.instructionsPt;
+    return {
+      exerciseId: fe.exerciseId,
+      name: sentenceCase(fe.exercise.namePt ?? fe.exercise.name),
+      sets: fe.sets,
+      reps: fe.reps,
+      weightKg: fe.weightKg === null ? null : Number(fe.weightKg),
+      restSeconds: fe.restSeconds,
+      bodyweight: BODYWEIGHT_EQUIPMENT.has(fe.exercise.equipment),
+      target: label(TARGET_LABELS, fe.exercise.target),
+      equipment: label(EQUIPMENT_LABELS, fe.exercise.equipment),
+      instructions: instructionsPt.length > 0 ? instructionsPt : fe.exercise.instructions,
+      instructionsInEnglish: instructionsPt.length === 0,
+    };
+  });
 
   const initialEntries = log.entries.map((e) => ({
     exerciseId: e.exerciseId,

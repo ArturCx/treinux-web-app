@@ -7,8 +7,8 @@ import { discardWorkout, finishWorkout, setEntry } from "../actions";
 
 /*
  * O instrumento (04-telemetria-v2): takeover escuro de tela inteira, SÓ
- * durante o treino ao vivo. Cronômetro de descanso em 7 segmentos, LEDs
- * por série, dados em mono, dock fixo com o relógio da sessão.
+ * durante o treino ao vivo. Cronômetro (controlado à mão) em 7 segmentos +
+ * timer de descanso que aparece ao registrar uma série e some quando zera.
  */
 
 type ExerciseInput = {
@@ -18,6 +18,11 @@ type ExerciseInput = {
   reps: string;
   weightKg: number | null;
   restSeconds: number | null;
+  bodyweight: boolean;
+  target: string;
+  equipment: string;
+  instructions: string[];
+  instructionsInEnglish: boolean;
 };
 
 type EntryInput = {
@@ -27,7 +32,13 @@ type EntryInput = {
   reps: string;
 };
 
-type SetState = { done: boolean; weight: string; reps: string; justLit?: boolean };
+type SetState = {
+  done: boolean;
+  weight: string;
+  reps: string;
+  na: boolean;
+  justLit?: boolean;
+};
 
 const key = (exerciseId: string, setNumber: number) => `${exerciseId}-${setNumber}`;
 const DEFAULT_REST = 90;
@@ -57,20 +68,27 @@ export function WorkoutSession({
       for (let n = 1; n <= ex.sets; n++) {
         const existing = entryByKey.get(key(ex.exerciseId, n));
         init[key(ex.exerciseId, n)] = existing
-          ? { done: true, weight: existing.weightKg, reps: existing.reps }
+          ? {
+              done: true,
+              weight: existing.weightKg,
+              reps: existing.reps,
+              // série concluída sem peso num exercício de peso corporal = N/A
+              na: ex.bodyweight && existing.weightKg === "",
+            }
           : {
               done: false,
-              weight: ex.weightKg !== null ? String(ex.weightKg) : "",
+              // peso corporal já entra N/A; senão, o alvo da prescrição
+              weight: ex.bodyweight || ex.weightKg === null ? "" : String(ex.weightKg),
               // reps já vêm preenchidas quando a prescrição é um número exato
               reps: exactReps(ex.reps),
+              na: ex.bodyweight,
             };
       }
     }
     return init;
   });
 
-  // bloco "em execução" = o que o usuário selecionou (ordem livre); começa no
-  // primeiro exercício com série pendente, mas pode ser trocado a qualquer hora
+  // bloco "em execução" = o que o usuário selecionou (ordem livre)
   const [selectedId, setSelectedId] = useState<string>(() => {
     const doneKeys = new Set(
       initialEntries.map((e) => key(e.exerciseId, e.setNumber)),
@@ -83,10 +101,16 @@ export function WorkoutSession({
     return (firstPending ?? exercises[0])?.exerciseId ?? "";
   });
 
-  // cronômetro de descanso: conta a partir do registro da série rumo ao alvo
+  // cronômetro (stopwatch) manual: acumulado em ms + instante em que ligou
+  const [swBaseMs, setSwBaseMs] = useState(0);
+  const [swStartedAt, setSwStartedAt] = useState<number | null>(null);
+
+  // descanso: aparece ao registrar série, conta pra baixo e some ao zerar
   const [restStart, setRestStart] = useState<number | null>(null);
   const [restTarget, setRestTarget] = useState<number>(DEFAULT_REST);
+
   const [now, setNow] = useState(0);
+  const [infoId, setInfoId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<{
     exerciseId: string;
     setNumber: number;
@@ -115,7 +139,7 @@ export function WorkoutSession({
     fd.set("exerciseId", exerciseId);
     fd.set("setNumber", String(setNumber));
     fd.set("done", s.done ? "1" : "0");
-    fd.set("weightKg", s.weight);
+    fd.set("weightKg", s.na ? "" : s.weight);
     fd.set("reps", s.reps);
     startTransition(async () => {
       try {
@@ -142,7 +166,7 @@ export function WorkoutSession({
     setSelectedId(ex.exerciseId); // registrar uma série passa o foco pra ela
     persist(ex.exerciseId, setNumber, next);
     if (next.done) {
-      // registrar série liga o cronômetro com o alvo do exercício
+      // concluir a série faz aparecer o timer de descanso com o alvo do exercício
       // eslint-disable-next-line react-hooks/purity -- leitura de relógio num event handler: o descanso começa no instante real do toque
       setRestStart(Date.now());
       setRestTarget(ex.restSeconds ?? DEFAULT_REST);
@@ -161,11 +185,41 @@ export function WorkoutSession({
     if (s.done) persist(exerciseId, setNumber, s);
   }
 
-  const elapsed = restStart === null ? 0 : Math.max(0, Math.floor((now - restStart) / 1000));
-  const over = restStart !== null && elapsed >= restTarget;
+  function toggleNa(ex: ExerciseInput, setNumber: number) {
+    const k = key(ex.exerciseId, setNumber);
+    const cur = state[k];
+    const next = { ...cur, na: !cur.na, weight: !cur.na ? "" : cur.weight };
+    setState((prev) => ({ ...prev, [k]: next }));
+    if (cur.done) persist(ex.exerciseId, setNumber, next);
+  }
+
+  // ── cronômetro (stopwatch) ──────────────────────────────────────
+  const swRunning = swStartedAt !== null;
+  const swSeconds = Math.floor(
+    (swBaseMs + (swStartedAt !== null ? now - swStartedAt : 0)) / 1000,
+  );
+  function swToggle() {
+    if (swStartedAt === null) {
+      setSwStartedAt(Date.now());
+    } else {
+      setSwBaseMs((b) => b + (Date.now() - swStartedAt));
+      setSwStartedAt(null);
+    }
+  }
+  function swReset() {
+    setSwBaseMs(0);
+    setSwStartedAt(null);
+  }
+
+  // ── descanso ────────────────────────────────────────────────────
+  const restElapsed = restStart === null ? 0 : Math.max(0, Math.floor((now - restStart) / 1000));
+  const restLeft = Math.max(0, restTarget - restElapsed);
+  const showRest = restStart !== null && restLeft > 0;
+
   const sessionSeconds = Math.max(0, Math.floor((now - startedAtMs) / 1000));
   const [head, tail] = splitFichaName(fichaName);
   const nextSet = Math.min(totals.done + 1, totals.total);
+  const infoExercise = exercises.find((e) => e.exerciseId === infoId) ?? null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-coal font-sans text-dtext">
@@ -203,9 +257,9 @@ export function WorkoutSession({
             </div>
           </section>
 
-          {/* ── o instrumento ─────────────────────────────────── */}
+          {/* ── cronômetro (stopwatch) ───────────────────────────── */}
           <section
-            aria-label="Cronômetro de descanso"
+            aria-label="Cronômetro"
             className="relative mx-[18px] mt-[18px] border border-dedge bg-panel px-4 pt-[18px] pb-5 lg:sticky lg:top-[26px] lg:mx-0 lg:mt-[26px]"
           >
             <div
@@ -213,56 +267,86 @@ export function WorkoutSession({
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_0%,rgba(255,106,61,0.06),transparent_55%)]"
             />
             <div className="relative flex items-baseline justify-between">
-              <span
-                className={`text-[11px] font-bold tracking-[0.24em] uppercase ${over ? "text-phos" : "text-amber"}`}
-              >
-                {over ? "Descanso completo" : "Descanso"}
+              <span className="text-[11px] font-bold tracking-[0.24em] text-amber uppercase">
+                Cronômetro
               </span>
               <span className="font-mono text-[12px] text-dmut tabular-nums">
-                alvo {formatClock(restTarget)}
+                {swRunning ? "rodando" : swSeconds > 0 ? "pausado" : "parado"}
               </span>
             </div>
 
-            <SegClock seconds={elapsed} over={over} idle={restStart === null} />
-
-            <div aria-hidden="true" className="mt-[18px] flex gap-1">
-              {Array.from({ length: 18 }).map((_, i) => {
-                const lit =
-                  restStart !== null &&
-                  i < (over ? 18 : Math.round((elapsed / restTarget) * 18));
-                return (
-                  <i
-                    key={i}
-                    className={`h-2.5 flex-1 ${
-                      lit
-                        ? over
-                          ? "bg-phos shadow-[0_0_5px_rgba(143,227,136,0.5)]"
-                          : "bg-amber shadow-[0_0_5px_rgba(255,106,61,0.5)]"
-                        : "bg-led-off"
-                    }`}
-                  />
-                );
-              })}
-            </div>
+            <SegClock
+              seconds={swSeconds}
+              dim={swSeconds === 0 && !swRunning}
+              blink={swRunning}
+            />
 
             <div className="relative mt-[18px] flex gap-2.5">
               <button
                 type="button"
-                onClick={() => setRestTarget((t) => t + 30)}
-                disabled={restStart === null}
-                className="min-h-12 flex-1 cursor-pointer border border-dgray bg-transparent font-mono text-[14px] font-medium tracking-[0.06em] text-dtext transition-colors hover:border-amber hover:text-amber disabled:cursor-default disabled:opacity-40 disabled:hover:border-dgray disabled:hover:text-dtext focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                onClick={swToggle}
+                className="min-h-12 flex-1 cursor-pointer border border-amber bg-transparent font-mono text-[14px] font-bold tracking-[0.05em] text-amber transition-colors hover:bg-amber hover:text-coal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
               >
-                +30s
+                {swRunning ? "Pausar ❚❚" : "Iniciar ▶"}
               </button>
               <button
                 type="button"
-                onClick={() => restStart !== null && setRestStart(now - restTarget * 1000)}
-                disabled={restStart === null || over}
+                onClick={swReset}
+                disabled={swSeconds === 0 && !swRunning}
                 className="min-h-12 flex-1 cursor-pointer border border-dgray bg-transparent font-mono text-[14px] font-medium tracking-[0.06em] text-dtext transition-colors hover:border-amber hover:text-amber disabled:cursor-default disabled:opacity-40 disabled:hover:border-dgray disabled:hover:text-dtext focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
               >
-                Pular descanso →
+                Zerar ↺
               </button>
             </div>
+
+            {/* timer de descanso: aparece ao concluir uma série, some ao zerar */}
+            {showRest && (
+              <div className="animate-rise relative mt-4 border border-amber/60 bg-coal px-3.5 pt-3 pb-3.5">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10.5px] font-bold tracking-[0.24em] text-amber uppercase">
+                    Descanso
+                  </span>
+                  <span className="font-mono text-[12px] text-dmut tabular-nums">
+                    alvo {formatClock(restTarget)}
+                  </span>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="mt-1.5 text-center font-mono text-[40px] leading-none font-bold text-amber tabular-nums drop-shadow-[0_0_10px_rgba(255,106,61,0.45)]"
+                >
+                  {formatClock(restLeft)}
+                </div>
+                <div aria-hidden="true" className="mt-2.5 flex gap-1">
+                  {Array.from({ length: 18 }).map((_, i) => {
+                    const lit = i < Math.round((restLeft / restTarget) * 18);
+                    return (
+                      <i
+                        key={i}
+                        className={`h-2 flex-1 ${
+                          lit ? "bg-amber shadow-[0_0_5px_rgba(255,106,61,0.5)]" : "bg-led-off"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setRestTarget((t) => t + 30)}
+                    className="min-h-11 flex-1 cursor-pointer border border-dgray bg-transparent font-mono text-[13px] font-medium text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                  >
+                    +30s
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRestStart(null)}
+                    className="min-h-11 flex-1 cursor-pointer border border-dgray bg-transparent font-mono text-[13px] font-medium text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                  >
+                    Pular →
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
@@ -323,7 +407,21 @@ export function WorkoutSession({
                 </span>
 
                 <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="text-[17px] font-bold tracking-[-0.01em]">{ex.name}</h2>
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <h2 className="truncate text-[17px] font-bold tracking-[-0.01em]">{ex.name}</h2>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInfoId(ex.exerciseId);
+                      }}
+                      aria-label={`Como fazer ${ex.name}`}
+                      title="Como fazer"
+                      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-dgray font-mono text-[12px] font-bold text-dmut transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                    >
+                      ?
+                    </button>
+                  </div>
                   <div className="font-mono text-[18px] font-bold whitespace-nowrap tabular-nums">
                     {ex.sets} <i className="text-amber not-italic">×</i> {ex.reps}
                   </div>
@@ -352,18 +450,43 @@ export function WorkoutSession({
                         <span className="w-7 shrink-0 font-mono text-[11px] text-dmut tabular-nums">
                           S{n}
                         </span>
-                        <label className="flex flex-1 items-center gap-1">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={s.weight}
-                            onChange={(e) => edit(ex.exerciseId, n, "weight", e.target.value)}
-                            onBlur={() => commit(ex.exerciseId, n)}
-                            placeholder={ex.weightKg !== null ? String(ex.weightKg) : "—"}
-                            className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
-                          />
+
+                        {/* peso: input, ou N/A (bloqueado, escuro) para peso corporal */}
+                        <div className="flex flex-1 items-center gap-1">
+                          {s.na ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleNa(ex, n)}
+                              title="Marcar peso (usar carga)"
+                              className="h-11 w-full min-w-0 cursor-pointer border-b border-dgray bg-dedge/50 px-1 text-center font-mono text-[13px] font-bold text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                            >
+                              N/A
+                            </button>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={s.weight}
+                                onChange={(e) => edit(ex.exerciseId, n, "weight", e.target.value)}
+                                onBlur={() => commit(ex.exerciseId, n)}
+                                placeholder={ex.weightKg !== null ? String(ex.weightKg) : "—"}
+                                className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => toggleNa(ex, n)}
+                                title="Sem peso (N/A)"
+                                aria-label={`Marcar série ${n} como sem peso`}
+                                className="min-h-11 shrink-0 cursor-pointer px-0.5 font-mono text-[10px] text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                              >
+                                n/a
+                              </button>
+                            </>
+                          )}
                           <span className="font-mono text-[11px] text-dmut">kg</span>
-                        </label>
+                        </div>
+
                         <label className="flex flex-1 items-center gap-1">
                           <input
                             type="text"
@@ -386,7 +509,100 @@ export function WorkoutSession({
         </main>
       </div>
 
+      {infoExercise && (
+        <ExerciseInfo exercise={infoExercise} onClose={() => setInfoId(null)} />
+      )}
+
       <Dock logId={logId} sessionSeconds={sessionSeconds} />
+    </div>
+  );
+}
+
+/** Overlay "como fazer" — instruções do exercício sem sair do treino. */
+function ExerciseInfo({
+  exercise,
+  onClose,
+}: {
+  exercise: ExerciseInput;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Como fazer ${exercise.name}`}
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-coal/80 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-rise max-h-[85dvh] w-full max-w-[560px] overflow-y-auto border border-dedge bg-panel px-[18px] pt-5 pb-8 sm:px-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-bold tracking-[0.2em] text-amber uppercase">
+              Como fazer
+            </div>
+            <h2 className="mt-1 text-[20px] leading-tight font-bold tracking-[-0.01em]">
+              {exercise.name}
+            </h2>
+            <div className="mt-1 font-mono text-[12px] text-dmut">
+              {exercise.target} · {exercise.equipment}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="flex size-11 shrink-0 cursor-pointer items-center justify-center border border-dgray text-[18px] text-dmut transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+          >
+            ×
+          </button>
+        </div>
+
+        {exercise.instructions.length > 0 ? (
+          <ol className="mt-5 flex flex-col">
+            {exercise.instructions.map((step, i) => (
+              <li
+                key={i}
+                className="flex gap-3.5 border-t border-dedge py-3.5 first:border-t-0 first:pt-0"
+              >
+                <span className="shrink-0 font-mono text-[15px] font-bold text-amber tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-[14px] leading-relaxed text-dtext">{step}</p>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-5 text-[14px] text-dmut">
+            Sem instruções para este exercício.
+          </p>
+        )}
+
+        {exercise.instructionsInEnglish && exercise.instructions.length > 0 && (
+          <p className="mt-4 font-mono text-[11px] text-dgray">
+            Instruções em inglês, como no catálogo original.
+          </p>
+        )}
+
+        <Link
+          href={`/exercicios/${exercise.exerciseId}`}
+          target="_blank"
+          className="mt-6 flex min-h-12 items-center justify-between border border-dgray px-4 font-mono text-[13px] font-bold text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+        >
+          Abrir página do exercício
+          <span aria-hidden="true" className="text-amber">
+            ↗
+          </span>
+        </Link>
+      </div>
     </div>
   );
 }
@@ -474,21 +690,19 @@ const MAP: Record<number, string> = {
   9: "abcfgd",
 };
 
-function SegDigit({ value, over, idle }: { value: number; over: boolean; idle: boolean }) {
+function SegDigit({ value, dim }: { value: number; dim: boolean }) {
   const on = MAP[value] ?? "";
   return (
     <svg viewBox="0 0 56 100" className="h-auto w-[min(17vw,74px)] lg:w-[92px]">
       {Object.entries(SEG).map(([seg, points]) => {
-        const lit = !idle && on.includes(seg);
+        const lit = !dim && on.includes(seg);
         return (
           <polygon
             key={seg}
             points={points}
             className={
               lit
-                ? over
-                  ? "fill-phos drop-shadow-[0_0_6px_rgba(143,227,136,0.55)]"
-                  : "fill-amber drop-shadow-[0_0_6px_rgba(255,106,61,0.55)]"
+                ? "fill-amber drop-shadow-[0_0_6px_rgba(255,106,61,0.55)]"
                 : "fill-led-off"
             }
           />
@@ -498,25 +712,25 @@ function SegDigit({ value, over, idle }: { value: number; over: boolean; idle: b
   );
 }
 
-function SegClock({ seconds, over, idle }: { seconds: number; over: boolean; idle: boolean }) {
+function SegClock({ seconds, dim, blink }: { seconds: number; dim: boolean; blink: boolean }) {
   const m = Math.min(9, Math.floor(seconds / 60));
   const s1 = Math.floor((seconds % 60) / 10);
   const s2 = seconds % 10;
-  const dotClass = idle
+  const dotClass = dim
     ? "bg-led-off"
-    : over
-      ? "bg-phos shadow-[0_0_6px_rgba(143,227,136,0.55)]"
-      : "animate-blink bg-amber shadow-[0_0_6px_rgba(255,106,61,0.55)]";
+    : blink
+      ? "animate-blink bg-amber shadow-[0_0_6px_rgba(255,106,61,0.55)]"
+      : "bg-amber shadow-[0_0_6px_rgba(255,106,61,0.55)]";
 
   return (
     <div aria-hidden="true" className="relative mt-3.5 flex items-center justify-center gap-2.5">
-      <SegDigit value={m} over={over} idle={idle} />
+      <SegDigit value={m} dim={dim} />
       <span className="flex flex-col gap-4">
         <i className={`size-2.5 rounded-[2px] ${dotClass}`} />
         <i className={`size-2.5 rounded-[2px] ${dotClass}`} />
       </span>
-      <SegDigit value={s1} over={over} idle={idle} />
-      <SegDigit value={s2} over={over} idle={idle} />
+      <SegDigit value={s1} dim={dim} />
+      <SegDigit value={s2} dim={dim} />
     </div>
   );
 }
