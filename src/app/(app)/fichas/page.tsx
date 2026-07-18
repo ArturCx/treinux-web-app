@@ -228,13 +228,17 @@ function CardStat({
 
 /**
  * Marquee de dados reais entre réguas de tinta — nunca frase motivacional.
- * Dois grupos idênticos, cada um com min-w-full: emenda sem corte mesmo com
- * poucos itens (o grupo nunca fica mais estreito que a tela).
+ * Repete os itens até ~12 para o conteúdo encher a barra (espaçamento justo,
+ * o justify-around só espalha se sobrar espaço). Dois grupos com min-w-full,
+ * cada um deslizando -100%: emenda sem corte em qualquer largura de tela.
  */
 function Ticker({ items }: { items: string[] }) {
+  const reps = Math.max(2, Math.ceil(12 / Math.max(1, items.length)));
+  const filled = Array.from({ length: reps }, () => items).flat();
+
   const group = (
     <div className="shout flex min-w-full shrink-0 animate-marquee-full items-center justify-around whitespace-nowrap text-[15px] tracking-[0.14em] tabular-nums">
-      {items.map((item, i) => (
+      {filled.map((item, i) => (
         <span key={i} className="flex shrink-0 items-center gap-2.5 px-3">
           {item}
           <span aria-hidden="true" className={i % 2 === 0 ? "text-ember" : "text-riso"}>
