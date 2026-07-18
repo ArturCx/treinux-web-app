@@ -38,7 +38,7 @@
   --font-mono: var(--font-jbmono), monospace;
 
   --animate-marquee: marquee 26s linear infinite;
-  --animate-marquee-full: marquee-full 26s linear infinite;
+  --animate-marquee-full: marquee-full 60s linear infinite;
   --animate-spin-slow: spin 26s linear infinite;
   --animate-rise: rise 0.3s ease-out both;
   --animate-enter: enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
