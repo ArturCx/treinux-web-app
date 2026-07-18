@@ -226,30 +226,32 @@ function CardStat({
   );
 }
 
-/** Marquee de dados reais entre réguas de tinta — nunca frase motivacional. */
+/**
+ * Marquee de dados reais entre réguas de tinta — nunca frase motivacional.
+ * Dois grupos idênticos, cada um com min-w-full: emenda sem corte mesmo com
+ * poucos itens (o grupo nunca fica mais estreito que a tela).
+ */
 function Ticker({ items }: { items: string[] }) {
-  const strip = (
-    <span className="shout inline-flex items-center text-[15px] tracking-[0.14em] tabular-nums">
+  const group = (
+    <div className="shout flex min-w-full shrink-0 animate-marquee-full items-center justify-around whitespace-nowrap text-[15px] tracking-[0.14em] tabular-nums">
       {items.map((item, i) => (
-        <span key={i} className="inline-flex items-center">
-          <span className="px-4">{item}</span>
+        <span key={i} className="flex shrink-0 items-center gap-2.5 px-3">
+          {item}
           <span aria-hidden="true" className={i % 2 === 0 ? "text-ember" : "text-riso"}>
             ★
           </span>
         </span>
       ))}
-    </span>
+    </div>
   );
 
   return (
     <div
       aria-hidden="true"
-      className="overflow-hidden border-b-2 border-ink py-[9px] whitespace-nowrap"
+      className="flex overflow-hidden border-b-2 border-ink py-[9px]"
     >
-      <div className="flex w-max animate-marquee">
-        {strip}
-        {strip}
-      </div>
+      {group}
+      {group}
     </div>
   );
 }
