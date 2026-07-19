@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   title: "Treinux — Diário de treino",
   description:
     "Monte suas fichas, registre cada série e acompanhe seu progresso.",
+  // Ícones servidos de public/icons (não pela convenção app/icon.png):
+  // favicon transparente + apple-touch com fundo paper sólido.
+  icons: {
+    icon: "/icons/icon.png",
+    apple: "/icons/apple-icon.png",
+  },
 };
 
 export default function RootLayout({

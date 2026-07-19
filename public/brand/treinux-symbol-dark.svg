@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Treinux">
+  <circle cx="63" cy="62" r="44" fill="none" stroke="#9db4f0" stroke-width="17" opacity=".55"></circle>
+  <circle cx="57" cy="58" r="44" fill="none" stroke="#d14b24" stroke-width="17"></circle>
+  <circle cx="60" cy="60" r="12" fill="none" stroke="#f4f1ea" stroke-width="3"></circle>
+  <line x1="60" y1="4" x2="60" y2="14" stroke="#f4f1ea" stroke-width="2.5"></line>
+</svg>

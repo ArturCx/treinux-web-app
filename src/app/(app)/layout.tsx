@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
@@ -28,9 +29,17 @@ export default async function AppLayout({
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-baseline gap-x-6 gap-y-1.5 px-[18px] pt-3.5 lg:flex-nowrap lg:items-center lg:px-10 lg:pt-4">
           <Link
             href="/fichas"
-            className="text-[21px] font-bold tracking-[-0.02em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ember"
+            aria-label="Treinux"
+            className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ember"
           >
-            Treinux<span className="text-ember">.</span>
+            <Image
+              src="/brand/treinux-logo.svg"
+              alt="Treinux"
+              width={389}
+              height={96}
+              priority
+              className="h-7 w-auto"
+            />
           </Link>
 
           <div className="ml-auto flex items-center gap-4 lg:order-3">

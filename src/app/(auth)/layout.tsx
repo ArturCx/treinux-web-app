@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -92,9 +93,14 @@ function Poster() {
   return (
     <aside className="relative flex flex-col justify-between overflow-hidden bg-ink text-paper">
       <div className="flex items-baseline justify-between px-7 pt-8 lg:px-10 lg:pt-10">
-        <div className="text-[22px] font-bold tracking-[-0.02em]">
-          Treinux<span className="text-ember">.</span>
-        </div>
+        <Image
+          src="/brand/treinux-logo-dark.svg"
+          alt="Treinux"
+          width={389}
+          height={96}
+          priority
+          className="h-8 w-auto"
+        />
         <div className="text-[11px] font-medium tracking-[0.2em] text-paper/50">
           DIÁRIO DE TREINO — Nº 001
         </div>

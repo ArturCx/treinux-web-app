@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
@@ -36,9 +37,14 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="text-[22px] font-bold tracking-[-0.02em]">
-        Treinux<span className="text-ember">.</span>
-      </div>
+      <Image
+        src="/brand/treinux-logo.svg"
+        alt="Treinux"
+        width={389}
+        height={96}
+        priority
+        className="h-9 w-auto"
+      />
 
       <div className="flex flex-col gap-2">
         <h1 className="text-[34px] leading-[1.05] font-bold tracking-[-0.03em]">
