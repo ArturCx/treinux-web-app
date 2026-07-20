@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { sentenceCase } from "@/lib/catalog";
 import { splitFichaName } from "@/lib/ficha-stats";
+import { parseSnapshot } from "./snapshot";
 import { MiniStamp, Tape } from "@/components/zine";
 
 /*
@@ -42,6 +43,7 @@ export async function loadSessionPrint(
       id: true,
       startedAt: true,
       finishedAt: true,
+      snapshot: true,
       ficha: {
         select: {
           id: true,
@@ -77,9 +79,23 @@ export async function loadSessionPrint(
     byExercise.set(e.exerciseId, list);
   }
 
-  // nomes de exercícios que saíram da ficha depois da sessão
-  const fichaIds = new Set(log.ficha?.exercises.map((e) => e.exerciseId) ?? []);
-  const orphanIds = [...byExercise.keys()].filter((id) => !fichaIds.has(id));
+  // A prescrição da folha: o snapshot congelado ao finalizar. Logs antigos
+  // (sem snapshot) caem na ficha atual, mas ignorando exercícios sem nenhuma
+  // série — senão itens adicionados à ficha DEPOIS da sessão contariam 0/N.
+  const snapshot = parseSnapshot(log.snapshot);
+  const prescription =
+    snapshot ??
+    (log.ficha?.exercises ?? [])
+      .filter((fe) => byExercise.has(fe.exerciseId))
+      .map((fe) => ({
+        exerciseId: fe.exerciseId,
+        name: sentenceCase(fe.exercise.namePt ?? fe.exercise.name),
+        sets: fe.sets,
+      }));
+
+  // nomes de exercícios registrados fora da prescrição da folha
+  const prescribedIds = new Set(prescription.map((p) => p.exerciseId));
+  const orphanIds = [...byExercise.keys()].filter((id) => !prescribedIds.has(id));
   const orphans = orphanIds.length
     ? await prisma.exercise.findMany({
         where: { id: { in: orphanIds } },
@@ -91,13 +107,13 @@ export async function loadSessionPrint(
   );
 
   const rows: SessionPrintData["rows"] = [];
-  for (const fe of log.ficha?.exercises ?? []) {
-    const entries = byExercise.get(fe.exerciseId) ?? [];
+  for (const p of prescription) {
+    const entries = byExercise.get(p.exerciseId) ?? [];
     rows.push({
-      exerciseId: fe.exerciseId,
-      name: sentenceCase(fe.exercise.namePt ?? fe.exercise.name),
+      exerciseId: p.exerciseId,
+      name: p.name,
       done: entries.length,
-      prescribed: fe.sets,
+      prescribed: p.sets,
       reps: formatReps(entries),
       weight: formatWeights(entries),
     });

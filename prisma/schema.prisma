@@ -146,6 +146,9 @@ model WorkoutLog {
   startedAt   DateTime  @default(now())
   finishedAt  DateTime?
   notes       String?
+  // Prescrição congelada ao finalizar: [{exerciseId, name, sets, order}].
+  // O histórico é imutável — edições posteriores na ficha não o afetam.
+  snapshot    Json?
   entries     WorkoutLogEntry[]
 
   @@index([userId, startedAt])

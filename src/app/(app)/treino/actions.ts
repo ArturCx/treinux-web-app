@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
+import { buildSnapshot } from "./snapshot";
 
 /** Garante que o treino (log) pertence ao usuário; senão, trata como inexistente. */
 async function ownedLog(logId: string, userId: string) {
@@ -103,9 +104,11 @@ export async function finishWorkout(formData: FormData) {
 
   const log = await ownedLog(logId, session.user.id);
   if (!log.finishedAt) {
+    // congela a prescrição: o histórico não muda se a ficha mudar depois
+    const snapshot = await buildSnapshot(logId);
     await prisma.workoutLog.update({
       where: { id: logId },
-      data: { finishedAt: new Date() },
+      data: { finishedAt: new Date(), snapshot: snapshot ?? undefined },
     });
   }
 
