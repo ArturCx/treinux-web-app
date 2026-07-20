@@ -44,8 +44,8 @@ export default async function TreinoPage({
                   namePt: true,
                   equipment: true,
                   target: true,
-                  instructions: true,
-                  instructionsPt: true,
+                  imageUrl: true,
+                  gifUrl: true,
                 },
               },
             },
@@ -81,7 +81,6 @@ export default async function TreinoPage({
 
   // Sessão ao vivo = o instrumento (língua telemetria, 04-telemetria-v2).
   const exercises = (log.ficha?.exercises ?? []).map((fe) => {
-    const instructionsPt = fe.exercise.instructionsPt;
     return {
       exerciseId: fe.exerciseId,
       name: sentenceCase(fe.exercise.namePt ?? fe.exercise.name),
@@ -92,8 +91,8 @@ export default async function TreinoPage({
       bodyweight: BODYWEIGHT_EQUIPMENT.has(fe.exercise.equipment),
       target: label(TARGET_LABELS, fe.exercise.target),
       equipment: label(EQUIPMENT_LABELS, fe.exercise.equipment),
-      instructions: instructionsPt.length > 0 ? instructionsPt : fe.exercise.instructions,
-      instructionsInEnglish: instructionsPt.length === 0,
+      imageUrl: fe.exercise.imageUrl,
+      gifUrl: fe.exercise.gifUrl,
     };
   });
 

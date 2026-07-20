@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { splitFichaName } from "@/lib/ficha-stats";
 import { discardWorkout, finishWorkout, setEntry } from "../actions";
 
@@ -21,8 +22,8 @@ type ExerciseInput = {
   bodyweight: boolean;
   target: string;
   equipment: string;
-  instructions: string[];
-  instructionsInEnglish: boolean;
+  imageUrl: string;
+  gifUrl: string | null;
 };
 
 type EntryInput = {
@@ -72,8 +73,8 @@ export function WorkoutSession({
               done: true,
               weight: existing.weightKg,
               reps: existing.reps,
-              // série concluída sem peso num exercício de peso corporal = N/A
-              na: ex.bodyweight && existing.weightKg === "",
+              // peso corporal é sempre N/A (fixo, não editável)
+              na: ex.bodyweight,
             }
           : {
               done: false,
@@ -186,6 +187,7 @@ export function WorkoutSession({
   }
 
   function toggleNa(ex: ExerciseInput, setNumber: number) {
+    if (ex.bodyweight) return; // peso corporal: N/A é fixo
     const k = key(ex.exerciseId, setNumber);
     const cur = state[k];
     const next = { ...cur, na: !cur.na, weight: !cur.na ? "" : cur.weight };
@@ -451,9 +453,16 @@ export function WorkoutSession({
                           S{n}
                         </span>
 
-                        {/* peso: input, ou N/A (bloqueado, escuro) para peso corporal */}
+                        {/* peso: input, ou N/A. Em peso corporal o N/A é fixo (não editável). */}
                         <div className="flex flex-1 items-center gap-1">
-                          {s.na ? (
+                          {ex.bodyweight ? (
+                            <span
+                              aria-label="Sem peso"
+                              className="flex h-11 w-full min-w-0 items-center justify-center border-b border-dedge bg-dedge/50 px-1 font-mono text-[13px] font-bold text-dgray"
+                            >
+                              N/A
+                            </span>
+                          ) : s.na ? (
                             <button
                               type="button"
                               onClick={() => toggleNa(ex, n)}
@@ -526,6 +535,8 @@ function ExerciseInfo({
   exercise: ExerciseInput;
   onClose: () => void;
 }) {
+  const [loaded, setLoaded] = useState(false);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -566,40 +577,48 @@ function ExerciseInfo({
           </button>
         </div>
 
-        {exercise.instructions.length > 0 ? (
-          <ol className="mt-5 flex flex-col">
-            {exercise.instructions.map((step, i) => (
-              <li
-                key={i}
-                className="flex gap-3.5 border-t border-dedge py-3.5 first:border-t-0 first:pt-0"
-              >
-                <span className="shrink-0 font-mono text-[15px] font-bold text-amber tabular-nums">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p className="text-[14px] leading-relaxed text-dtext">{step}</p>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="mt-5 text-[14px] text-dmut">
-            Sem instruções para este exercício.
-          </p>
-        )}
-
-        {exercise.instructionsInEnglish && exercise.instructions.length > 0 && (
-          <p className="mt-4 font-mono text-[11px] text-dgray">
-            Instruções em inglês, como no catálogo original.
-          </p>
-        )}
+        {/* O movimento vale mais que os passos no meio da série: GIF primeiro. */}
+        <div className="mt-5 border border-dedge bg-coal">
+          <div className="relative mx-auto aspect-square w-full max-w-[340px] overflow-hidden">
+            {exercise.gifUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element -- GIF animado: next/image congela a animação */}
+                <img
+                  src={exercise.gifUrl}
+                  alt={`Animação do exercício ${exercise.name}`}
+                  width={360}
+                  height={360}
+                  onLoad={() => setLoaded(true)}
+                  className="size-full object-cover"
+                />
+                {!loaded && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span
+                      aria-hidden="true"
+                      className="inline-block size-6 animate-spin rounded-full border-2 border-dgray border-t-amber"
+                    />
+                  </span>
+                )}
+              </>
+            ) : (
+              <Image
+                src={exercise.imageUrl}
+                alt={`Posição do exercício ${exercise.name}`}
+                width={360}
+                height={360}
+                className="size-full object-cover"
+              />
+            )}
+          </div>
+        </div>
 
         <Link
           href={`/exercicios/${exercise.exerciseId}`}
-          target="_blank"
-          className="mt-6 flex min-h-12 items-center justify-between border border-dgray px-4 font-mono text-[13px] font-bold text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+          className="mt-5 flex min-h-12 items-center justify-between border border-dgray px-4 font-mono text-[13px] font-bold text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
         >
-          Abrir página do exercício
+          Ver passo a passo
           <span aria-hidden="true" className="text-amber">
-            ↗
+            →
           </span>
         </Link>
       </div>
