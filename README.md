@@ -1,9 +1,15 @@
 <p align="center">
-  <img src="public/treinux-wordmark.svg" alt="Treinux" width="360" />
+  <a href="https://treinux.vercel.app/">
+    <img src="public/brand/treinux-logo-dark.svg" alt="Treinux" width="360" />
+  </a>
 </p>
 
 <p align="center">
   <em>Build your workout plans, log every set, and watch each session print itself — a training diary that reads like a zine and runs like an instrument.</em>
+</p>
+
+<p align="center">
+  <strong>Live at <a href="https://treinux.vercel.app/">treinux.vercel.app</a></strong>
 </p>
 
 <p align="center">
@@ -110,7 +116,7 @@ npm run dev            # Next.js → http://localhost:3000
 
 | Component          | Platform         | Notes                                                                                                |
 | ------------------ | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| **Web**      | **Vercel** | Next.js preset auto-detected; set the`.env` vars in the project.                                   |
+| **Web**      | **Vercel** | Live at [treinux.vercel.app](https://treinux.vercel.app/); Next.js preset auto-detected; set the`.env` vars in the project. |
 | **Database** | **Neon**   | Managed Postgres;`DIRECT_URL` for `prisma migrate deploy`, `DATABASE_URL` (pooled) at runtime. |
 
 ---
