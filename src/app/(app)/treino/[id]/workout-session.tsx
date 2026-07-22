@@ -228,9 +228,17 @@ export function WorkoutSession({
       <header className="flex items-center justify-between border-b border-dedge px-[18px] py-3.5 lg:px-10">
         <Link
           href="/fichas"
-          className="text-[19px] font-bold tracking-[-0.01em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber"
+          aria-label="Treinux"
+          className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber"
         >
-          Treinux<span className="text-amber">.</span>
+          <Image
+            src="/brand/treinux-logo-dark.svg"
+            alt="Treinux"
+            width={389}
+            height={96}
+            priority
+            className="h-6 w-auto"
+          />
         </Link>
         <div className="flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-amber uppercase">
           <span aria-hidden="true" className="size-2 animate-livepulse rounded-full bg-amber" />
@@ -685,7 +693,8 @@ function Dock({ logId, sessionSeconds }: { logId: string; sessionSeconds: number
 }
 
 /* ── display de 7 segmentos ─────────────────────────────────────
-   Polígonos do canon 04-telemetria-v2; dígitos M:SS com glow. */
+   Polígonos do canon 04-telemetria-v2; dígitos M:SS (MM:SS a partir
+   de 10 min, com dígitos mais estreitos no mobile) com glow. */
 
 const SEG: Record<string, string> = {
   a: "8,0 48,0 40,10 16,10",
@@ -709,10 +718,13 @@ const MAP: Record<number, string> = {
   9: "abcfgd",
 };
 
-function SegDigit({ value, dim }: { value: number; dim: boolean }) {
+function SegDigit({ value, dim, compact = false }: { value: number; dim: boolean; compact?: boolean }) {
   const on = MAP[value] ?? "";
   return (
-    <svg viewBox="0 0 56 100" className="h-auto w-[min(17vw,74px)] lg:w-[92px]">
+    <svg
+      viewBox="0 0 56 100"
+      className={`h-auto ${compact ? "w-[min(14vw,74px)]" : "w-[min(17vw,74px)]"} lg:w-[92px]`}
+    >
       {Object.entries(SEG).map(([seg, points]) => {
         const lit = !dim && on.includes(seg);
         return (
@@ -732,7 +744,10 @@ function SegDigit({ value, dim }: { value: number; dim: boolean }) {
 }
 
 function SegClock({ seconds, dim, blink }: { seconds: number; dim: boolean; blink: boolean }) {
-  const m = Math.min(9, Math.floor(seconds / 60));
+  const m = Math.min(99, Math.floor(seconds / 60));
+  const m1 = Math.floor(m / 10);
+  const m2 = m % 10;
+  const wide = m1 > 0;
   const s1 = Math.floor((seconds % 60) / 10);
   const s2 = seconds % 10;
   const dotClass = dim
@@ -743,13 +758,14 @@ function SegClock({ seconds, dim, blink }: { seconds: number; dim: boolean; blin
 
   return (
     <div aria-hidden="true" className="relative mt-3.5 flex items-center justify-center gap-2.5">
-      <SegDigit value={m} dim={dim} />
+      {wide && <SegDigit value={m1} dim={dim} compact />}
+      <SegDigit value={m2} dim={dim} compact={wide} />
       <span className="flex flex-col gap-4">
         <i className={`size-2.5 rounded-[2px] ${dotClass}`} />
         <i className={`size-2.5 rounded-[2px] ${dotClass}`} />
       </span>
-      <SegDigit value={s1} dim={dim} />
-      <SegDigit value={s2} dim={dim} />
+      <SegDigit value={s1} dim={dim} compact={wide} />
+      <SegDigit value={s2} dim={dim} compact={wide} />
     </div>
   );
 }
