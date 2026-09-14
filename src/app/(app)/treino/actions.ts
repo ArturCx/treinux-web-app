@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
+import { parseDistanceInput, parseDurationInput } from "@/lib/measure";
 import { buildSnapshot } from "./snapshot";
 
 /** Garante que o treino (log) pertence ao usuário; senão, trata como inexistente. */
@@ -51,7 +52,8 @@ export async function startWorkout(formData: FormData) {
 
 /**
  * Marca/atualiza uma série do treino. done=true faz upsert do registro com o
- * peso/reps informados; done=false remove o registro daquela série.
+ * que foi informado — peso/reps, ou tempo/distância no cardio —; done=false
+ * remove o registro daquela série.
  */
 export async function setEntry(formData: FormData) {
   const session = await requireSession();
@@ -76,22 +78,22 @@ export async function setEntry(formData: FormData) {
   const repsRaw = String(formData.get("reps") ?? "").trim();
   const weightKg = weightRaw ? Number(weightRaw) : null;
   const reps = repsRaw ? Number(repsRaw) : null;
+  // cardio: tempo ("10", "10:30") e distância em km ("5", "2,5") — inválido vira null
+  const durationS = parseDurationInput(String(formData.get("duration") ?? ""));
+  const distanceM = parseDistanceInput(String(formData.get("distance") ?? ""));
+
+  const values = {
+    weightKg: weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
+    reps: reps !== null && Number.isInteger(reps) ? reps : null,
+    durationS: durationS !== null && Number.isFinite(durationS) && durationS > 0 ? durationS : null,
+    distanceM: distanceM !== null && Number.isFinite(distanceM) && distanceM > 0 ? distanceM : null,
+  };
 
   await prisma.workoutLogEntry.upsert({
     where: { logId_exerciseId_setNumber: { logId, exerciseId, setNumber } },
-    create: {
-      logId,
-      exerciseId,
-      setNumber,
-      weightKg: weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
-      reps: reps !== null && Number.isInteger(reps) ? reps : null,
-      completedAt: new Date(),
-    },
-    // completedAt fica só na criação: editar peso/reps depois não reconta o descanso
-    update: {
-      weightKg: weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
-      reps: reps !== null && Number.isInteger(reps) ? reps : null,
-    },
+    create: { logId, exerciseId, setNumber, ...values, completedAt: new Date() },
+    // completedAt fica só na criação: editar os valores depois não reconta o descanso
+    update: values,
   });
 
   revalidatePath(`/treino/${logId}`);

@@ -5,6 +5,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { sentenceCase } from "@/lib/catalog";
+import {
+  DEFAULT_CARDIO_DURATION_S,
+  isTimeDistance,
+  parseDistanceInput,
+  parseDurationInput,
+} from "@/lib/measure";
 
 export type ActionState = { error?: string } | null;
 
@@ -118,7 +124,7 @@ export async function addExercise(formData: FormData) {
 
   const exercise = await prisma.exercise.findUnique({
     where: { id: exerciseId },
-    select: { id: true },
+    select: { id: true, measure: true },
   });
   if (!exercise) throw new Error("Exercício não encontrado.");
 
@@ -134,11 +140,20 @@ export async function addExercise(formData: FormData) {
       exerciseId,
       order: (last?.order ?? 0) + 1,
       sets: parseSets(formData),
+      ...initialPrescription(exercise.measure),
     },
   });
 
   revalidatePath(`/fichas/${fichaId}`);
   revalidatePath("/fichas");
+}
+
+/**
+ * Prescrição inicial além das séries: cardio em tempo × distância nasce com
+ * um tempo alvo (o "8-12" de reps não se aplica); o resto usa os defaults do schema.
+ */
+function initialPrescription(measure: "WEIGHT_REPS" | "TIME_DISTANCE") {
+  return isTimeDistance(measure) ? { durationS: DEFAULT_CARDIO_DURATION_S } : {};
 }
 
 /**
@@ -154,7 +169,7 @@ export async function addExerciseToFicha(formData: FormData) {
 
   const exercise = await prisma.exercise.findUnique({
     where: { id: exerciseId },
-    select: { id: true },
+    select: { id: true, measure: true },
   });
   if (!exercise) throw new Error("Exercício não encontrado.");
 
@@ -175,6 +190,7 @@ export async function addExerciseToFicha(formData: FormData) {
         exerciseId,
         order: (last?.order ?? 0) + 1,
         sets: parseSets(formData),
+        ...initialPrescription(exercise.measure),
       },
     });
   }
@@ -209,18 +225,50 @@ export async function updatePrescription(
 
   const item = await prisma.fichaExercise.findFirst({
     where: { id: itemId, ficha: { userId: session.user.id } },
-    select: { id: true, fichaId: true },
+    select: { id: true, fichaId: true, exercise: { select: { measure: true } } },
   });
   if (!item) return { error: "Exercício não encontrado na ficha." };
 
   const sets = Number(formData.get("sets"));
-  const reps = String(formData.get("reps") ?? "").trim();
-  const weightRaw = String(formData.get("weightKg") ?? "").trim().replace(",", ".");
   const restRaw = String(formData.get("restSeconds") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!Number.isInteger(sets) || sets < 1 || sets > 20)
     return { error: "Séries deve ser um número entre 1 e 20." };
+
+  const restSeconds = restRaw ? Number(restRaw) : null;
+  if (restSeconds !== null && (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 900))
+    return { error: "Descanso deve ser entre 0 e 900 segundos." };
+
+  // A medida do exercício decide quais campos a prescrição tem.
+  if (isTimeDistance(item.exercise.measure)) {
+    const durationS = parseDurationInput(String(formData.get("duration") ?? ""));
+    if (durationS === null) return { error: "Informe o tempo (ex.: 10, 12,5 ou 10:30)." };
+    if (Number.isNaN(durationS) || durationS < 1 || durationS > 24 * 3600)
+      return { error: "Tempo inválido — use minutos (10) ou relógio (10:30)." };
+
+    const distanceM = parseDistanceInput(String(formData.get("distance") ?? ""));
+    if (distanceM !== null && (Number.isNaN(distanceM) || distanceM < 0 || distanceM > 1_000_000))
+      return { error: "Distância deve ser um número em km (ex.: 5 ou 2,5)." };
+
+    await prisma.fichaExercise.update({
+      where: { id: itemId },
+      data: {
+        sets,
+        durationS,
+        distanceM: distanceM === 0 ? null : distanceM,
+        weightKg: null,
+        restSeconds,
+        notes: notes || null,
+      },
+    });
+    revalidatePath(`/fichas/${item.fichaId}`);
+    return null;
+  }
+
+  const reps = String(formData.get("reps") ?? "").trim();
+  const weightRaw = String(formData.get("weightKg") ?? "").trim().replace(",", ".");
+
   if (!reps) return { error: "Informe as repetições (ex.: 8-12, AMRAP, 30s)." };
   if (reps.length > 20) return { error: "Repetições: máximo de 20 caracteres." };
 
@@ -228,13 +276,17 @@ export async function updatePrescription(
   if (weightKg !== null && (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 9999))
     return { error: "Peso deve ser um número entre 0 e 9999 kg." };
 
-  const restSeconds = restRaw ? Number(restRaw) : null;
-  if (restSeconds !== null && (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 900))
-    return { error: "Descanso deve ser entre 0 e 900 segundos." };
-
   await prisma.fichaExercise.update({
     where: { id: itemId },
-    data: { sets, reps, weightKg, restSeconds, notes: notes || null },
+    data: {
+      sets,
+      reps,
+      weightKg,
+      durationS: null,
+      distanceM: null,
+      restSeconds,
+      notes: notes || null,
+    },
   });
 
   revalidatePath(`/fichas/${item.fichaId}`);
@@ -275,7 +327,7 @@ export async function replaceExercise(
       fichaId: true,
       exerciseId: true,
       notes: true,
-      exercise: { select: { bodyPart: true, equipment: true } },
+      exercise: { select: { bodyPart: true, equipment: true, measure: true } },
     },
   });
   if (!item) throw new Error("Exercício não encontrado na ficha.");
@@ -302,8 +354,11 @@ export async function replaceExercise(
     select: { exerciseId: true },
   });
 
+  // mesma medida: um item de tempo × distância só troca por outro assim —
+  // a prescrição (tempo alvo, distância) continua fazendo sentido
   const base = {
     bodyPart: item.exercise.bodyPart,
+    measure: item.exercise.measure,
     id: { notIn: inFicha.map((e) => e.exerciseId) },
   };
   let candidatos = await prisma.exercise.findMany({

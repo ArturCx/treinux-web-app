@@ -2,7 +2,12 @@
 const SECONDS_PER_SET = 40;
 const DEFAULT_REST = 60;
 
-export type PrescriptionLike = { sets: number; restSeconds: number | null };
+export type PrescriptionLike = {
+  sets: number;
+  restSeconds: number | null;
+  /** tempo alvo por série (cardio) — quando presente, substitui os 40s médios */
+  durationS?: number | null;
+};
 
 /**
  * Números do cabeçalho da ficha. `minutes` é uma estimativa grosseira
@@ -11,7 +16,8 @@ export type PrescriptionLike = { sets: number; restSeconds: number | null };
 export function fichaStats(exercises: PrescriptionLike[]) {
   const sets = exercises.reduce((sum, e) => sum + e.sets, 0);
   const seconds = exercises.reduce(
-    (sum, e) => sum + e.sets * (SECONDS_PER_SET + (e.restSeconds ?? DEFAULT_REST)),
+    (sum, e) =>
+      sum + e.sets * ((e.durationS ?? SECONDS_PER_SET) + (e.restSeconds ?? DEFAULT_REST)),
     0,
   );
   return {

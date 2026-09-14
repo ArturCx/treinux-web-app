@@ -30,7 +30,7 @@ export default async function FichasPage() {
         archived: true,
         createdAt: true,
         updatedAt: true,
-        exercises: { select: { sets: true, restSeconds: true } },
+        exercises: { select: { sets: true, restSeconds: true, durationS: true } },
       },
     }),
     prisma.workoutLogEntry.count({

@@ -33,10 +33,12 @@ export default async function FichaPage({
           sets: true,
           reps: true,
           weightKg: true,
+          durationS: true,
+          distanceM: true,
           restSeconds: true,
           notes: true,
           exercise: {
-            select: { id: true, name: true, namePt: true },
+            select: { id: true, name: true, namePt: true, measure: true },
           },
         },
       },

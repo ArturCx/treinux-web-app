@@ -12,6 +12,7 @@ import {
 } from "@/lib/catalog";
 import { Overprint, SectionLabel } from "@/components/zine";
 import { ExerciseMedia } from "./exercise-media";
+import { isTimeDistance } from "@/lib/measure";
 import { AddToFicha } from "./add-to-ficha";
 
 /**
@@ -103,6 +104,9 @@ export default async function ExercicioPage({
             </DataRow>
           )}
           <DataRow k="Grupo">{label(BODY_PART_LABELS, exercise.bodyPart)}</DataRow>
+          <DataRow k="Medida">
+            {isTimeDistance(exercise.measure) ? "Tempo × distância" : "Peso × repetições"}
+          </DataRow>
         </div>
       </div>
 
@@ -138,7 +142,11 @@ export default async function ExercicioPage({
         )}
 
         <div className="mt-9">
-          <AddToFicha exerciseId={exercise.id} fichas={fichaOptions} />
+          <AddToFicha
+            exerciseId={exercise.id}
+            fichas={fichaOptions}
+            timeDistance={isTimeDistance(exercise.measure)}
+          />
         </div>
       </div>
 

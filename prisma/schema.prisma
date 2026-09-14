@@ -11,13 +11,13 @@ datasource db {
 // ---------- Auth (Better Auth) ----------
 
 model User {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String       @unique
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
   fichas        Ficha[]
@@ -72,11 +72,20 @@ model Verification {
 
 // ---------- Treinux ----------
 
+// Como o exercício é medido — define o que a ficha prescreve e o que o treino
+// registra por série. Corrida, esteira, bike, elíptico… não fazem sentido em
+// peso × repetições: são tempo × distância. Classificado caso a caso
+// (src/lib/measure.ts): burpee com halteres, polichinelo etc. seguem em reps.
+enum ExerciseMeasure {
+  WEIGHT_REPS // padrão: carga (kg) × repetições
+  TIME_DISTANCE // cardio: tempo (s) × distância (m)
+}
+
 // Exercício do catálogo local (dataset hasaneyldrm/exercises-dataset, MIT).
 // Mídia © Gym visual (https://gymvisual.com/) — atribuição obrigatória na UI,
 // servida localmente a 180x180 conforme os termos do dataset.
 model Exercise {
-  id               String   @id // id do dataset, ex: "0001"
+  id               String          @id // id do dataset, ex: "0001"
   name             String
   namePt           String? // nome em pt-BR (traduzido via LLM); UI prefere este
   category         String
@@ -84,14 +93,15 @@ model Exercise {
   equipment        String // body weight, dumbbell, kettlebell, ... (28 valores)
   target           String // músculo primário: abs, lats, pectorals, ...
   muscleGroup      String?
+  measure          ExerciseMeasure @default(WEIGHT_REPS) // caso a caso — ver src/lib/measure.ts
   secondaryMuscles String[]
   instructions     String[] // passos em inglês (o dataset não tem pt)
-  instructionsPt   String[] @default([]) // passos traduzidos p/ pt-BR via LLM; UI prefere estes
+  instructionsPt   String[]        @default([]) // passos traduzidos p/ pt-BR via LLM; UI prefere estes
   imageUrl         String // /exercicios/0001-xxx.jpg (public/)
   gifUrl           String? // animação; só baixamos sob demanda
   attribution      String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   fichaItems       FichaExercise[]
 
   @@index([name])
@@ -129,6 +139,8 @@ model FichaExercise {
   sets        Int      @default(3)
   reps        String   @default("8-12") // string p/ suportar "8-12", "AMRAP", "30s"
   weightKg    Decimal? @db.Decimal(6, 2) // peso alvo; null p/ peso corporal/calistenia
+  durationS   Int? // tempo alvo por série (cardio: TIME_DISTANCE)
+  distanceM   Int? // distância alvo por série, em metros (cardio; opcional)
   restSeconds Int?
   notes       String?
 
@@ -138,18 +150,18 @@ model FichaExercise {
 
 // Registro de treino realizado
 model WorkoutLog {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fichaId     String?
-  ficha       Ficha?    @relation(fields: [fichaId], references: [id], onDelete: SetNull)
-  startedAt   DateTime  @default(now())
-  finishedAt  DateTime?
-  notes       String?
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fichaId    String?
+  ficha      Ficha?            @relation(fields: [fichaId], references: [id], onDelete: SetNull)
+  startedAt  DateTime          @default(now())
+  finishedAt DateTime?
+  notes      String?
   // Prescrição congelada ao finalizar: [{exerciseId, name, sets, order}].
   // O histórico é imutável — edições posteriores na ficha não o afetam.
-  snapshot    Json?
-  entries     WorkoutLogEntry[]
+  snapshot   Json?
+  entries    WorkoutLogEntry[]
 
   @@index([userId, startedAt])
   @@map("workout_log")
@@ -157,16 +169,17 @@ model WorkoutLog {
 
 // Série realizada em um treino
 model WorkoutLogEntry {
-  id         String     @id @default(cuid())
-  logId      String
-  log        WorkoutLog @relation(fields: [logId], references: [id], onDelete: Cascade)
-  exerciseId String
-  setNumber  Int
-  reps       Int?
-  weightKg   Decimal?   @db.Decimal(6, 2)
-  durationS  Int? // p/ isometrias (prancha, etc.)
-  notes      String?
-  completedAt DateTime? @default(now()) // instante em que a série foi registrada — base do descanso médio
+  id          String     @id @default(cuid())
+  logId       String
+  log         WorkoutLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  setNumber   Int
+  reps        Int?
+  weightKg    Decimal?   @db.Decimal(6, 2)
+  durationS   Int? // tempo realizado (cardio) — também serve p/ isometrias
+  distanceM   Int? // distância realizada, em metros (cardio)
+  notes       String?
+  completedAt DateTime?  @default(now()) // instante em que a série foi registrada — base do descanso médio
 
   @@unique([logId, exerciseId, setNumber]) // 1 registro por série (upsert)
   @@index([logId])

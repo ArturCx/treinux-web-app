@@ -9,6 +9,7 @@ import {
   label,
   sentenceCase,
 } from "@/lib/catalog";
+import { distanceInputValue, durationInputValue } from "@/lib/measure";
 import { SessionPrint, loadSessionPrint } from "../session-print";
 import { WorkoutSession } from "./workout-session";
 
@@ -37,11 +38,14 @@ export default async function TreinoPage({
               sets: true,
               reps: true,
               weightKg: true,
+              durationS: true,
+              distanceM: true,
               restSeconds: true,
               exercise: {
                 select: {
                   name: true,
                   namePt: true,
+                  measure: true,
                   equipment: true,
                   target: true,
                   imageUrl: true,
@@ -53,7 +57,14 @@ export default async function TreinoPage({
         },
       },
       entries: {
-        select: { exerciseId: true, setNumber: true, weightKg: true, reps: true },
+        select: {
+          exerciseId: true,
+          setNumber: true,
+          weightKg: true,
+          reps: true,
+          durationS: true,
+          distanceM: true,
+        },
       },
     },
   });
@@ -87,7 +98,10 @@ export default async function TreinoPage({
       sets: fe.sets,
       reps: fe.reps,
       weightKg: fe.weightKg === null ? null : Number(fe.weightKg),
+      durationS: fe.durationS,
+      distanceM: fe.distanceM,
       restSeconds: fe.restSeconds,
+      measure: fe.exercise.measure,
       bodyweight: BODYWEIGHT_EQUIPMENT.has(fe.exercise.equipment),
       target: label(TARGET_LABELS, fe.exercise.target),
       equipment: label(EQUIPMENT_LABELS, fe.exercise.equipment),
@@ -101,6 +115,8 @@ export default async function TreinoPage({
     setNumber: e.setNumber,
     weightKg: e.weightKg === null ? "" : String(Number(e.weightKg)),
     reps: e.reps === null ? "" : String(e.reps),
+    duration: durationInputValue(e.durationS),
+    distance: distanceInputValue(e.distanceM),
   }));
 
   return (

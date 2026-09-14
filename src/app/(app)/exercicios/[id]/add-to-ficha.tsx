@@ -14,11 +14,14 @@ type FichaOption = { id: string; name: string; hasExercise: boolean };
 export function AddToFicha({
   exerciseId,
   fichas,
+  timeDistance = false,
 }: {
   exerciseId: string;
   fichas: FichaOption[];
+  /** cardio medido em tempo × distância: entra com 1 série (um bloco contínuo) */
+  timeDistance?: boolean;
 }) {
-  const [sets, setSets] = useState(3);
+  const [sets, setSets] = useState(timeDistance ? 1 : 3);
 
   return (
     <section

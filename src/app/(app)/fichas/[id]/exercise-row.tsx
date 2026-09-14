@@ -3,6 +3,14 @@
 import { createContext, useActionState, useContext, useState } from "react";
 import Link from "next/link";
 import { sentenceCase } from "@/lib/catalog";
+import {
+  distanceInputValue,
+  durationInputValue,
+  formatDistance,
+  formatDuration,
+  isTimeDistance,
+  type ExerciseMeasure,
+} from "@/lib/measure";
 import { Tape } from "@/components/zine";
 import {
   moveExercise,
@@ -33,12 +41,15 @@ export type RowItem = {
   sets: number;
   reps: string;
   weightKg: number | null;
+  durationS: number | null;
+  distanceM: number | null;
   restSeconds: number | null;
   notes: string | null;
   exercise: {
     id: string;
     name: string;
     namePt: string | null;
+    measure: ExerciseMeasure;
   };
 };
 
@@ -82,6 +93,8 @@ export function ExerciseRow({
 
   const displayName = sentenceCase(item.exercise.namePt ?? item.exercise.name);
   const blue = index % 2 === 0;
+  // cardio de locomoção/máquina: a prescrição é tempo × distância, não peso × reps
+  const timed = isTimeDistance(item.exercise.measure);
 
   return (
     <article
@@ -160,26 +173,54 @@ export function ExerciseRow({
                     required
                     defaultValue={item.sets}
                   />
-                  <EditorField
-                    id={`reps-${item.id}`}
-                    name="reps"
-                    label="Repetições"
-                    type="text"
-                    required
-                    maxLength={20}
-                    defaultValue={item.reps}
-                    placeholder="8-12"
-                  />
-                  <EditorField
-                    id={`weight-${item.id}`}
-                    name="weightKg"
-                    label="Peso (kg)"
-                    type="text"
-                    inputMode="decimal"
-                    maxLength={8}
-                    defaultValue={item.weightKg ?? ""}
-                    placeholder="—"
-                  />
+                  {timed ? (
+                    <>
+                      <EditorField
+                        id={`duration-${item.id}`}
+                        name="duration"
+                        label="Tempo (min)"
+                        type="text"
+                        inputMode="decimal"
+                        required
+                        maxLength={8}
+                        defaultValue={durationInputValue(item.durationS)}
+                        placeholder="10 ou 10:30"
+                      />
+                      <EditorField
+                        id={`distance-${item.id}`}
+                        name="distance"
+                        label="Distância (km)"
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={8}
+                        defaultValue={distanceInputValue(item.distanceM)}
+                        placeholder="—"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <EditorField
+                        id={`reps-${item.id}`}
+                        name="reps"
+                        label="Repetições"
+                        type="text"
+                        required
+                        maxLength={20}
+                        defaultValue={item.reps}
+                        placeholder="8-12"
+                      />
+                      <EditorField
+                        id={`weight-${item.id}`}
+                        name="weightKg"
+                        label="Peso (kg)"
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={8}
+                        defaultValue={item.weightKg ?? ""}
+                        placeholder="—"
+                      />
+                    </>
+                  )}
                   <EditorField
                     id={`rest-${item.id}`}
                     name="restSeconds"
@@ -231,13 +272,20 @@ export function ExerciseRow({
             <>
               <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 tabular-nums">
                 <span className="text-[27px] leading-none font-bold tracking-[-0.03em] lg:text-[30px]">
-                  {item.sets} <i className="text-ember not-italic">×</i> {item.reps}
+                  {item.sets} <i className="text-ember not-italic">×</i>{" "}
+                  {timed ? (item.durationS !== null ? formatDuration(item.durationS) : "—") : item.reps}
                 </span>
-                {item.weightKg !== null && (
-                  <span className="text-[15px] font-bold text-ember">
-                    {formatWeight(item.weightKg)}
-                  </span>
-                )}
+                {timed
+                  ? item.distanceM !== null && (
+                      <span className="text-[15px] font-bold text-ember">
+                        {formatDistance(item.distanceM)}
+                      </span>
+                    )
+                  : item.weightKg !== null && (
+                      <span className="text-[15px] font-bold text-ember">
+                        {formatWeight(item.weightKg)}
+                      </span>
+                    )}
                 {item.restSeconds !== null && (
                   <span className="text-[12.5px] font-medium text-muted">
                     {item.restSeconds}s descanso

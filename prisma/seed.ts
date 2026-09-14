@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { measureFor } from "../src/lib/measure";
 
 /**
  * Seed do catálogo a partir do dataset local (hasaneyldrm/exercises-dataset, MIT).
@@ -65,6 +66,9 @@ async function main() {
     equipment: e.equipment,
     target: e.target,
     muscleGroup: e.muscle_group || null,
+    // caso a caso (src/lib/measure.ts): locomoção e máquinas de cardio em
+    // tempo × distância; o resto — inclusive burpee com halteres — em peso × reps
+    measure: measureFor(e.id),
     secondaryMuscles: e.secondary_muscles ?? [],
     instructions: e.instruction_steps?.en ?? [],
     instructionsPt: stepsPt[e.id] ?? [],

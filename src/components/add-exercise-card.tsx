@@ -34,6 +34,7 @@ export function AddExerciseCard({
   name,
   taxonomy,
   imageUrl,
+  timeDistance = false,
 }: {
   fichaId: string;
   exerciseId: string;
@@ -41,13 +42,15 @@ export function AddExerciseCard({
   name: string;
   taxonomy: string;
   imageUrl: string;
+  /** cardio medido em tempo × distância: entra com 1 série (um bloco contínuo) */
+  timeDistance?: boolean;
 }) {
   const group = useContext(OpenCardContext);
   const [soloOpen, setSoloOpen] = useState(false);
   const open = group ? group.openId === exerciseId : soloOpen;
   const toggle = () =>
     group ? group.setOpenId(open ? null : exerciseId) : setSoloOpen(!open);
-  const [sets, setSets] = useState(4);
+  const [sets, setSets] = useState(timeDistance ? 1 : 4);
   const panelId = useId();
 
   return (
@@ -79,6 +82,11 @@ export function AddExerciseCard({
 
             <div className="mb-1.5 text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">
               Séries
+              {timeDistance && (
+                <span className="ml-1.5 font-medium tracking-[0.08em] text-clay normal-case">
+                  · tempo × distância
+                </span>
+              )}
             </div>
             <div className="flex w-max border border-ink bg-paper tabular-nums">
               <button

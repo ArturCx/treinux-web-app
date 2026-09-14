@@ -11,6 +11,7 @@ import {
   sentenceCase,
 } from "@/lib/catalog";
 import { CatalogSearch } from "./catalog-search";
+import { isTimeDistance } from "@/lib/measure";
 import { AddExerciseCard, AddExerciseGroup, DuotonePhoto } from "./add-exercise-card";
 
 const PAGE_SIZE = 24;
@@ -67,6 +68,7 @@ export async function ExerciseCatalog({
         imageUrl: true,
         bodyPart: true,
         target: true,
+        measure: true,
       },
     }),
     prisma.exercise.findMany({ select: { bodyPart: true, equipment: true } }),
@@ -198,6 +200,7 @@ export async function ExerciseCatalog({
                       name={displayName}
                       taxonomy={taxonomy}
                       imageUrl={exercise.imageUrl}
+                      timeDistance={isTimeDistance(exercise.measure)}
                     />
                   ) : (
                     <article className="flex h-full flex-col bg-paper">

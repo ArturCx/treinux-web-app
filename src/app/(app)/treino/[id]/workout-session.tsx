@@ -4,6 +4,14 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { splitFichaName } from "@/lib/ficha-stats";
+import {
+  distanceInputValue,
+  durationInputValue,
+  formatDistance,
+  formatDuration,
+  isTimeDistance,
+  type ExerciseMeasure,
+} from "@/lib/measure";
 import { discardWorkout, finishWorkout, setEntry } from "../actions";
 
 /*
@@ -18,7 +26,10 @@ type ExerciseInput = {
   sets: number;
   reps: string;
   weightKg: number | null;
+  durationS: number | null;
+  distanceM: number | null;
   restSeconds: number | null;
+  measure: ExerciseMeasure;
   bodyweight: boolean;
   target: string;
   equipment: string;
@@ -31,15 +42,21 @@ type EntryInput = {
   setNumber: number;
   weightKg: string;
   reps: string;
+  duration: string; // "10" ou "10:30" (cardio)
+  distance: string; // km, "5" ou "2,5" (cardio)
 };
 
 type SetState = {
   done: boolean;
   weight: string;
   reps: string;
+  duration: string;
+  distance: string;
   na: boolean;
   justLit?: boolean;
 };
+
+type SetField = "weight" | "reps" | "duration" | "distance";
 
 const key = (exerciseId: string, setNumber: number) => `${exerciseId}-${setNumber}`;
 const DEFAULT_REST = 90;
@@ -73,6 +90,8 @@ export function WorkoutSession({
               done: true,
               weight: existing.weightKg,
               reps: existing.reps,
+              duration: existing.duration,
+              distance: existing.distance,
               // peso corporal é sempre N/A (fixo, não editável)
               na: ex.bodyweight,
             }
@@ -82,6 +101,9 @@ export function WorkoutSession({
               weight: ex.bodyweight || ex.weightKg === null ? "" : String(ex.weightKg),
               // reps já vêm preenchidas quando a prescrição é um número exato
               reps: exactReps(ex.reps),
+              // cardio: tempo e distância alvo já preenchidos, é só confirmar
+              duration: durationInputValue(ex.durationS),
+              distance: distanceInputValue(ex.distanceM),
               na: ex.bodyweight,
             };
       }
@@ -142,6 +164,8 @@ export function WorkoutSession({
     fd.set("done", s.done ? "1" : "0");
     fd.set("weightKg", s.na ? "" : s.weight);
     fd.set("reps", s.reps);
+    fd.set("duration", s.duration);
+    fd.set("distance", s.distance);
     startTransition(async () => {
       try {
         await setEntry(fd);
@@ -174,7 +198,7 @@ export function WorkoutSession({
     }
   }
 
-  function edit(exerciseId: string, setNumber: number, field: "weight" | "reps", value: string) {
+  function edit(exerciseId: string, setNumber: number, field: SetField, value: string) {
     setState((prev) => {
       const k = key(exerciseId, setNumber);
       return { ...prev, [k]: { ...prev[k], [field]: value } };
@@ -399,6 +423,8 @@ export function WorkoutSession({
             ).length;
             const exDone = doneCount === ex.sets;
             const isActive = ex.exerciseId === selectedId;
+            // cardio de locomoção/máquina: a série registra tempo × distância
+            const timed = isTimeDistance(ex.measure);
 
             return (
               <article
@@ -433,7 +459,13 @@ export function WorkoutSession({
                     </button>
                   </div>
                   <div className="font-mono text-[18px] font-bold whitespace-nowrap tabular-nums">
-                    {ex.sets} <i className="text-amber not-italic">×</i> {ex.reps}
+                    {ex.sets} <i className="text-amber not-italic">×</i>{" "}
+                    {timed ? (ex.durationS !== null ? formatDuration(ex.durationS) : "—") : ex.reps}
+                    {timed && ex.distanceM !== null && (
+                      <span className="ml-2 text-[12px] font-medium text-dmut">
+                        {formatDistance(ex.distanceM)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -461,61 +493,95 @@ export function WorkoutSession({
                           S{n}
                         </span>
 
-                        {/* peso: input, ou N/A. Em peso corporal o N/A é fixo (não editável). */}
-                        <div className="flex flex-1 items-center gap-1">
-                          {ex.bodyweight ? (
-                            <span
-                              aria-label="Sem peso"
-                              className="flex h-11 w-full min-w-0 items-center justify-center border-b border-dedge bg-dedge/50 px-1 font-mono text-[13px] font-bold text-dgray"
-                            >
-                              N/A
-                            </span>
-                          ) : s.na ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleNa(ex, n)}
-                              title="Marcar peso (usar carga)"
-                              className="h-11 w-full min-w-0 cursor-pointer border-b border-dgray bg-dedge/50 px-1 text-center font-mono text-[13px] font-bold text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
-                            >
-                              N/A
-                            </button>
-                          ) : (
-                            <>
+                        {timed ? (
+                          <>
+                            {/* cardio: tempo (min ou m:ss) e distância (km) */}
+                            <label className="flex flex-1 items-center gap-1">
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                value={s.weight}
-                                onChange={(e) => edit(ex.exerciseId, n, "weight", e.target.value)}
+                                value={s.duration}
+                                onChange={(e) => edit(ex.exerciseId, n, "duration", e.target.value)}
                                 onBlur={() => commit(ex.exerciseId, n)}
-                                placeholder={ex.weightKg !== null ? String(ex.weightKg) : "—"}
+                                placeholder={durationInputValue(ex.durationS) || "10:00"}
+                                aria-label={`Tempo da série ${n}`}
                                 className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
                               />
-                              <button
-                                type="button"
-                                onClick={() => toggleNa(ex, n)}
-                                title="Sem peso (N/A)"
-                                aria-label={`Marcar série ${n} como sem peso`}
-                                className="min-h-11 shrink-0 cursor-pointer px-0.5 font-mono text-[10px] text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
-                              >
-                                n/a
-                              </button>
-                            </>
-                          )}
-                          <span className="font-mono text-[11px] text-dmut">kg</span>
-                        </div>
+                              <span className="font-mono text-[11px] text-dmut">min</span>
+                            </label>
+                            <label className="flex flex-1 items-center gap-1">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={s.distance}
+                                onChange={(e) => edit(ex.exerciseId, n, "distance", e.target.value)}
+                                onBlur={() => commit(ex.exerciseId, n)}
+                                placeholder={distanceInputValue(ex.distanceM) || "—"}
+                                aria-label={`Distância da série ${n}`}
+                                className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
+                              />
+                              <span className="font-mono text-[11px] text-dmut">km</span>
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            {/* peso: input, ou N/A. Em peso corporal o N/A é fixo (não editável). */}
+                            <div className="flex flex-1 items-center gap-1">
+                              {ex.bodyweight ? (
+                                <span
+                                  aria-label="Sem peso"
+                                  className="flex h-11 w-full min-w-0 items-center justify-center border-b border-dedge bg-dedge/50 px-1 font-mono text-[13px] font-bold text-dgray"
+                                >
+                                  N/A
+                                </span>
+                              ) : s.na ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleNa(ex, n)}
+                                  title="Marcar peso (usar carga)"
+                                  className="h-11 w-full min-w-0 cursor-pointer border-b border-dgray bg-dedge/50 px-1 text-center font-mono text-[13px] font-bold text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                                >
+                                  N/A
+                                </button>
+                              ) : (
+                                <>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={s.weight}
+                                    onChange={(e) => edit(ex.exerciseId, n, "weight", e.target.value)}
+                                    onBlur={() => commit(ex.exerciseId, n)}
+                                    placeholder={ex.weightKg !== null ? String(ex.weightKg) : "—"}
+                                    className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleNa(ex, n)}
+                                    title="Sem peso (N/A)"
+                                    aria-label={`Marcar série ${n} como sem peso`}
+                                    className="min-h-11 shrink-0 cursor-pointer px-0.5 font-mono text-[10px] text-dgray transition-colors hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                                  >
+                                    n/a
+                                  </button>
+                                </>
+                              )}
+                              <span className="font-mono text-[11px] text-dmut">kg</span>
+                            </div>
 
-                        <label className="flex flex-1 items-center gap-1">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={s.reps}
-                            onChange={(e) => edit(ex.exerciseId, n, "reps", e.target.value)}
-                            onBlur={() => commit(ex.exerciseId, n)}
-                            placeholder={ex.reps}
-                            className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
-                          />
-                          <span className="font-mono text-[11px] text-dmut">reps</span>
-                        </label>
+                            <label className="flex flex-1 items-center gap-1">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={s.reps}
+                                onChange={(e) => edit(ex.exerciseId, n, "reps", e.target.value)}
+                                onBlur={() => commit(ex.exerciseId, n)}
+                                placeholder={ex.reps}
+                                className="h-11 w-full min-w-0 border-b border-dgray bg-transparent px-1 text-center font-mono text-[14px] text-dtext tabular-nums outline-none transition-colors placeholder:text-dgray focus:border-amber"
+                              />
+                              <span className="font-mono text-[11px] text-dmut">reps</span>
+                            </label>
+                          </>
+                        )}
                       </div>
                     );
                   })}

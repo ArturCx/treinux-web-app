@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { sentenceCase } from "@/lib/catalog";
 import { splitFichaName } from "@/lib/ficha-stats";
+import { formatDistance, formatDurationClock, isTimeDistance } from "@/lib/measure";
 import { parseSnapshot } from "./snapshot";
 import { MiniStamp, Tape } from "@/components/zine";
 
@@ -22,13 +23,17 @@ export type SessionPrintData = {
     name: string;
     done: number;
     prescribed: number;
+    /** reps por série — ou tempo por série, no cardio */
     reps: string;
+    /** peso — ou distância, no cardio */
     weight: string;
   }[];
   totalDone: number;
   totalPrescribed: number;
   minutes: number;
   volume: number;
+  /** distância somada das séries de cardio, em metros */
+  distanceM: number;
   avgRestSeconds: number | null;
 };
 
@@ -65,6 +70,8 @@ export async function loadSessionPrint(
           setNumber: true,
           weightKg: true,
           reps: true,
+          durationS: true,
+          distanceM: true,
           completedAt: true,
         },
       },
@@ -93,40 +100,45 @@ export async function loadSessionPrint(
         sets: fe.sets,
       }));
 
-  // nomes de exercícios registrados fora da prescrição da folha
+  // Medida de cada exercício (decide se a linha lê reps × peso ou tempo ×
+  // distância) + nomes dos registrados fora da prescrição da folha. A medida
+  // é propriedade do catálogo, não da prescrição — por isso não vai no snapshot.
   const prescribedIds = new Set(prescription.map((p) => p.exerciseId));
   const orphanIds = [...byExercise.keys()].filter((id) => !prescribedIds.has(id));
-  const orphans = orphanIds.length
-    ? await prisma.exercise.findMany({
-        where: { id: { in: orphanIds } },
-        select: { id: true, name: true, namePt: true },
-      })
-    : [];
-  const orphanName = new Map(
-    orphans.map((e) => [e.id, sentenceCase(e.namePt ?? e.name)]),
-  );
+  const catalog = await prisma.exercise.findMany({
+    where: { id: { in: [...prescribedIds, ...orphanIds] } },
+    select: { id: true, name: true, namePt: true, measure: true },
+  });
+  const byId = new Map(catalog.map((e) => [e.id, e]));
+  const timed = (id: string) => {
+    const ex = byId.get(id);
+    return ex ? isTimeDistance(ex.measure) : false;
+  };
 
   const rows: SessionPrintData["rows"] = [];
   for (const p of prescription) {
     const entries = byExercise.get(p.exerciseId) ?? [];
+    const t = timed(p.exerciseId);
     rows.push({
       exerciseId: p.exerciseId,
       name: p.name,
       done: entries.length,
       prescribed: p.sets,
-      reps: formatReps(entries),
-      weight: formatWeights(entries),
+      reps: t ? formatDurations(entries) : formatReps(entries),
+      weight: t ? formatDistances(entries) : formatWeights(entries),
     });
   }
   for (const id of orphanIds) {
     const entries = byExercise.get(id) ?? [];
+    const ex = byId.get(id);
+    const t = timed(id);
     rows.push({
       exerciseId: id,
-      name: orphanName.get(id) ?? id,
+      name: ex ? sentenceCase(ex.namePt ?? ex.name) : id,
       done: entries.length,
       prescribed: entries.length,
-      reps: formatReps(entries),
-      weight: formatWeights(entries),
+      reps: t ? formatDurations(entries) : formatReps(entries),
+      weight: t ? formatDistances(entries) : formatWeights(entries),
     });
   }
 
@@ -136,6 +148,7 @@ export async function loadSessionPrint(
     (s, e) => s + (e.weightKg ? Number(e.weightKg) : 0) * (e.reps ?? 0),
     0,
   );
+  const distanceM = log.entries.reduce((s, e) => s + (e.distanceM ?? 0), 0);
   const minutes = log.finishedAt
     ? Math.max(1, Math.round((log.finishedAt.getTime() - log.startedAt.getTime()) / 60000))
     : 0;
@@ -151,6 +164,7 @@ export async function loadSessionPrint(
     totalPrescribed,
     minutes,
     volume,
+    distanceM,
     avgRestSeconds: averageRest(log.entries),
   };
 }
@@ -176,7 +190,12 @@ function averageRest(entries: { completedAt: Date | null }[]): number | null {
   return Math.round(gaps.reduce((s, g) => s + g, 0) / gaps.length);
 }
 
-type Entry = { weightKg: unknown; reps: number | null };
+type Entry = {
+  weightKg: unknown;
+  reps: number | null;
+  durationS: number | null;
+  distanceM: number | null;
+};
 
 function formatReps(entries: Entry[]) {
   if (entries.length === 0) return "—";
@@ -190,6 +209,21 @@ function formatWeights(entries: Entry[]) {
   if (weights.length === 0) return "corp.";
   const uniq = [...new Set(weights.map((w) => w.toLocaleString("pt-BR", { maximumFractionDigits: 2 })))];
   return `${uniq.join("·")}kg`;
+}
+
+/** Cardio: tempo por série em M:SS (10:00·12:30). */
+function formatDurations(entries: Entry[]) {
+  if (entries.length === 0) return "—";
+  return entries.map((e) => (e.durationS === null ? "—" : formatDurationClock(e.durationS))).join("·");
+}
+
+/** Cardio: distâncias distintas das séries (5 km · 2,5 km); sem distância → "—". */
+function formatDistances(entries: Entry[]) {
+  const ds = entries
+    .map((e) => e.distanceM)
+    .filter((d): d is number => d !== null && d > 0);
+  if (ds.length === 0) return "—";
+  return [...new Set(ds.map(formatDistance))].join("·");
 }
 
 /** A folha impressa em si. */
@@ -234,8 +268,8 @@ export function SessionPrint({
             <tr>
               <Th>Exercício</Th>
               <Th>Séries</Th>
-              <Th>Reps</Th>
-              <Th right>Peso</Th>
+              <Th>Reps · tempo</Th>
+              <Th right>Peso · dist.</Th>
             </tr>
           </thead>
           <tbody>
@@ -271,6 +305,11 @@ export function SessionPrint({
         {data.volume > 0 && (
           <Total>
             volume <i className="text-ember not-italic">{Math.round(data.volume)}</i> kg
+          </Total>
+        )}
+        {data.distanceM > 0 && (
+          <Total>
+            distância <i className="text-ember not-italic">{formatDistance(data.distanceM)}</i>
           </Total>
         )}
         {data.avgRestSeconds !== null && (
