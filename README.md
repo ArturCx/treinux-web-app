@@ -42,11 +42,11 @@ The whole product runs on a **hybrid design system** with two visual languages:
 | Screen                        | What it does                                                                                                                                                                                                                      |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Suas fichas**         | Lists your workout plans as paste-up cards (hard shadows, tape, ghost numerals), a live**data ticker** (weekly sets, last workout, next in rotation), and archived plans.                                                   |
-| **Ficha (detail)**      | The plan as a zine cover: prescription per exercise (sets × reps · weight · rest), inline**prescription editor**, reorder / swap-for-another (same muscle) / remove, and the boundary CTA **"● Iniciar treino"**. |
+| **Ficha (detail)**      | The plan as a zine cover: prescription per exercise (sets × reps · weight · rest — or sets × time · distance for running, treadmill, bike and other cardio), inline**prescription editor**, reorder / swap-for-another (same muscle) / remove, and the boundary CTA **"● Iniciar treino"**. |
 | **Catálogo**           | 1,324 exercises with free-text search + two filter dimensions (muscle group, equipment), pt-BR names, photos, and an add-to-ficha panel with a sets stepper.                                                                      |
 | **Exercício (detail)** | Encyclopedia page: photo/animation, target + secondary muscles, numbered execution steps, and a ficha picker to add it to a plan.                                                                                                 |
 | **Gerar ficha**         | Automatic generator (a "print-shop order"): modality (weights / calisthenics), muscle groups, equipment, per-workout duration → a**live proof** of the resulting split before anything is saved.                           |
-| **Treino (live)**       | Telemetry takeover: seven-segment rest countdown that lights up per set, real per-set**weight/reps** logging, session clock, and finish / discard.                                                                          |
+| **Treino (live)**       | Telemetry takeover: seven-segment rest countdown that lights up per set, real per-set**weight/reps** (or **time/distance** on cardio) logging, session clock, and finish / discard.                                                                          |
 | **Treino (history)**    | Each session "off the press" as a printed sheet — mono readout table under a**CONCLUÍDO** stamp — plus the session archive with totals (avg rest, volume, duration).                                                     |
 
 Other product details: **email/password auth** (Better Auth, httpOnly cookie sessions), fully **pt-BR** content with exercise names translated, `prefers-reduced-motion` respected throughout, and a **mobile-first** responsive layout.
@@ -96,6 +96,18 @@ npm run db:seed        # imports the ExerciseDB catalog (resumable)
 npm run dev            # Next.js → http://localhost:3000
 ```
 
+
+### 🔐 Environment
+
+Copy `.env.example` to `.env` and fill it in:
+
+| Variable             | Purpose                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL`       | Pooled Postgres connection (Neon `-pooler` host), used at runtime       |
+| `DIRECT_URL`         | Direct Postgres connection, used by `prisma migrate`                    |
+| `BETTER_AUTH_SECRET` | Session signing secret (`openssl rand -base64 32`)                      |
+| `BETTER_AUTH_API_KEY`| Better Auth Infra key (dashboard + sentinel abuse protection)           |
+| `BETTER_AUTH_URL`    | Optional public base URL; localhost and Vercel URLs are trusted by default |
 
 ### 📜 Scripts
 

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { dash, sentinel } from "@better-auth/infra";
 import { prisma } from "./prisma";
 
 /*
@@ -28,6 +29,22 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  // nextCookies precisa ser o último plugin
-  plugins: [nextCookies()],
+  plugins: [
+    // Better Auth Infra: painel (usuários, sessões, eventos) e proteção.
+    // A BETTER_AUTH_API_KEY vem do painel; sem ela os plugins só avisam no log.
+    dash({ apiKey: process.env.BETTER_AUTH_API_KEY }),
+    sentinel({
+      apiKey: process.env.BETTER_AUTH_API_KEY,
+      security: {
+        // tentativas repetidas de login numa conta: desafia (PoW, resolvido
+        // sozinho pelo sentinelClient) e depois bloqueia
+        credentialStuffing: {
+          enabled: true,
+          thresholds: { challenge: 3, block: 5 },
+        },
+      },
+    }),
+    // nextCookies precisa ser o último plugin
+    nextCookies(),
+  ],
 });
