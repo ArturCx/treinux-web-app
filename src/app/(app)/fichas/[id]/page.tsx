@@ -90,6 +90,7 @@ export default async function FichaPage({
                 <ExerciseRow
                   key={item.id}
                   item={item}
+                  fichaId={ficha.id}
                   index={i}
                   first={i === 0}
                   last={i === items.length - 1}

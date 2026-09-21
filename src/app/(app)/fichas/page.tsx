@@ -23,7 +23,10 @@ export default async function FichasPage() {
   const [fichas, weekSets, lastLog] = await Promise.all([
     prisma.ficha.findMany({
       where: { userId: session.user.id },
-      orderBy: [{ archived: "asc" }, { updatedAt: "desc" }],
+      // Ordem de criação: a letra do card (Ficha A, B, C…) é a posição na lista,
+      // então a ordem precisa ser estável. Por updatedAt, a primeira ficha criada
+      // caía para o fim (virava "D") e qualquer edição embaralhava as letras.
+      orderBy: [{ archived: "asc" }, { createdAt: "asc" }],
       select: {
         id: true,
         name: true,

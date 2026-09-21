@@ -22,10 +22,12 @@ import { AddToFicha } from "./add-to-ficha";
  */
 export default async function ExercicioPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ ficha?: string; de?: string; treino?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, origin] = await Promise.all([params, searchParams]);
   const session = await requireSession();
 
   const [exercise, fichas] = await Promise.all([
@@ -42,6 +44,8 @@ export default async function ExercicioPage({
   ]);
 
   if (!exercise) notFound();
+
+  const back = await resolveBack(origin, session.user.id);
 
   // Passos em pt-BR quando disponíveis; senão cai para o inglês do dataset.
   const instructions =
@@ -63,10 +67,10 @@ export default async function ExercicioPage({
     <div className="mx-auto max-w-[1240px] px-[18px] pt-6 pb-20 lg:grid lg:grid-cols-[520px_minmax(0,1fr)] lg:items-start lg:gap-x-14 lg:px-10 lg:pt-8 lg:pb-[100px]">
       <div className="lg:sticky lg:top-7">
         <Link
-          href="/exercicios"
+          href={back.href}
           className="text-[13px] font-medium text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
         >
-          ← Catálogo
+          ← {back.label}
         </Link>
         <div className="mt-3.5 text-[11px] font-bold tracking-[0.16em] text-muted uppercase tabular-nums">
           Espécime <b className="text-ember">{number}</b> ·{" "}
@@ -152,6 +156,36 @@ export default async function ExercicioPage({
 
     </div>
   );
+}
+
+/**
+ * De onde o usuário veio decide para onde o "voltar" aponta: a ficha (link do
+ * card da sequência), o catálogo em modo adicionar dessa ficha, o treino ao
+ * vivo — ou o catálogo geral, que é o padrão. Os ids vêm da URL, então só
+ * valem se o recurso for do próprio usuário; senão cai no catálogo.
+ */
+async function resolveBack(
+  origin: { ficha?: string; de?: string; treino?: string },
+  userId: string,
+): Promise<{ href: string; label: string }> {
+  if (origin.ficha) {
+    const ficha = await prisma.ficha.findFirst({
+      where: { id: origin.ficha, userId },
+      select: { id: true, name: true },
+    });
+    if (ficha)
+      return origin.de === "adicionar"
+        ? { href: `/fichas/${ficha.id}/adicionar`, label: `Adicionar a ${ficha.name}` }
+        : { href: `/fichas/${ficha.id}`, label: ficha.name };
+  }
+  if (origin.treino) {
+    const log = await prisma.workoutLog.findFirst({
+      where: { id: origin.treino, userId },
+      select: { id: true },
+    });
+    if (log) return { href: `/treino/${log.id}`, label: "Voltar ao treino" };
+  }
+  return { href: "/exercicios", label: "Catálogo" };
 }
 
 function DataRow({ k, children }: { k: string; children: React.ReactNode }) {

@@ -30,7 +30,10 @@ export function GeneratorForm() {
 
   const groups = groupsFor(modalidade);
   const chosen = groups.filter((g) => selected.has(g.key));
-  const maxCount = Math.max(1, Math.min(MAX_FICHAS, chosen.length));
+  // A quantidade vem ANTES dos grupos (passo 02): o teto é o que a modalidade
+  // comporta, e são os grupos que precisam cobrir as fichas — um por ficha.
+  const maxCount = Math.min(MAX_FICHAS, groups.length);
+  const missing = Math.max(0, count - chosen.length);
   const perFicha = exercisesPerFicha(minutes, modalidade);
   const dist = distributeGroups(chosen, count);
 
@@ -39,7 +42,8 @@ export function GeneratorForm() {
     setModalidade(m);
     setSelected(new Set()); // as categorias mudam junto
     setEquip(new Set());
-    setCount(1);
+    // mantém a quantidade pedida, só respeitando o teto da nova modalidade
+    setCount((c) => Math.min(c, Math.min(MAX_FICHAS, groupsFor(m).length)));
   }
 
   function toggleGroup(key: string) {
@@ -47,7 +51,6 @@ export function GeneratorForm() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      setCount((c) => Math.max(1, Math.min(c, Math.min(MAX_FICHAS, next.size || 1))));
       return next;
     });
   }
@@ -84,6 +87,37 @@ export function GeneratorForm() {
       ),
     },
     {
+      title: "Quantidade de fichas",
+      body: (
+        <>
+          <div className="flex w-max border-2 border-ink bg-paper tabular-nums">
+            <StepBtn
+              label="Uma ficha a menos"
+              disabled={count <= 1}
+              onClick={() => setCount((c) => Math.max(1, c - 1))}
+            >
+              −
+            </StepBtn>
+            <span className="flex w-16 items-center justify-center border-x-2 border-ink text-[22px] font-bold">
+              {count}
+            </span>
+            <StepBtn
+              label="Uma ficha a mais"
+              disabled={count >= maxCount}
+              onClick={() => setCount((c) => Math.min(maxCount, c + 1))}
+            >
+              +
+            </StepBtn>
+          </div>
+          <p className="mt-2.5 max-w-md text-[12.5px] text-muted">
+            Quantos treinos diferentes você quer na semana. No próximo passo você marca{" "}
+            <b className="font-bold text-ink">tudo o que quer treinar</b> e a gráfica divide entre{" "}
+            {count === 1 ? "a ficha" : `as ${count} fichas`}.
+          </p>
+        </>
+      ),
+    },
+    {
       title: modalidade === "calistenia" ? "Categorias" : "Grupos musculares",
       body: (
         <>
@@ -94,9 +128,19 @@ export function GeneratorForm() {
               </ChipBtn>
             ))}
           </div>
-          {selected.size === 0 && (
-            <p className="mt-2.5 text-[12.5px] text-muted">
-              Escolha o que quer treinar — a ordem define a divisão.
+          <p className="mt-2.5 max-w-md text-[12.5px] text-muted">
+            Marque <b className="font-bold text-ink">todos</b> os{" "}
+            {modalidade === "calistenia" ? "tipos de movimento" : "grupos"} da sua semana, não só os de
+            um treino —{" "}
+            {count === 1
+              ? "vão todos para a mesma ficha."
+              : `eles são distribuídos entre as ${count} fichas (veja a prova ao lado).`}
+          </p>
+          {missing > 0 && selected.size > 0 && (
+            <p role="status" className="mt-2 text-[12.5px] font-bold text-ember-deep">
+              Falta{missing === 1 ? "" : "m"} {missing}{" "}
+              {modalidade === "calistenia" ? "categoria" : "grupo"}
+              {missing === 1 ? "" : "s"}: cada ficha precisa de pelo menos um.
             </p>
           )}
         </>
@@ -133,30 +177,6 @@ export function GeneratorForm() {
               {d} <span className="ml-0.5 text-[12px] font-medium opacity-65">min</span>
             </Opt>
           ))}
-        </div>
-      ),
-    },
-    {
-      title: "Quantidade de fichas",
-      body: (
-        <div className="flex w-max border-2 border-ink bg-paper tabular-nums">
-          <StepBtn
-            label="Uma ficha a menos"
-            disabled={count <= 1}
-            onClick={() => setCount((c) => Math.max(1, c - 1))}
-          >
-            −
-          </StepBtn>
-          <span className="flex w-16 items-center justify-center border-x-2 border-ink text-[22px] font-bold">
-            {count}
-          </span>
-          <StepBtn
-            label="Uma ficha a mais"
-            disabled={count >= maxCount}
-            onClick={() => setCount((c) => Math.min(maxCount, c + 1))}
-          >
-            +
-          </StepBtn>
         </div>
       ),
     },
@@ -221,7 +241,7 @@ export function GeneratorForm() {
           <div className="mt-3.5 border-t-2 border-ink">
             {chosen.length === 0 ? (
               <p className="py-4 text-[13px] text-muted">
-                A prova sai em branco até você escolher os grupos do passo 02.
+                A prova sai em branco até você escolher os grupos do passo 03.
               </p>
             ) : (
               dist.map((gs, i) => (
@@ -231,7 +251,11 @@ export function GeneratorForm() {
                 >
                   <span className="shout text-[18px] tracking-[0.02em] tabular-nums">
                     Treino {LETTERS[i]} <i className="text-ember not-italic">—</i>{" "}
-                    {gs.map((g) => g.label).join(" · ")}
+                    {gs.length > 0 ? (
+                      gs.map((g) => g.label).join(" · ")
+                    ) : (
+                      <span className="text-clay">falta um grupo</span>
+                    )}
                   </span>
                   <span className="ml-auto text-[12.5px] font-medium whitespace-nowrap text-muted tabular-nums">
                     ~{perFicha} exercícios · {minutes} min
@@ -251,7 +275,7 @@ export function GeneratorForm() {
 
         <button
           type="submit"
-          disabled={pending || selected.size === 0}
+          disabled={pending || selected.size === 0 || missing > 0}
           className="shout mt-[26px] flex min-h-16 w-full cursor-pointer items-center justify-between gap-3.5 border-2 border-ink bg-ember px-5 text-[20px] tracking-[0.06em] text-paper shadow-[7px_7px_0_var(--color-ink)] transition-[transform,box-shadow] duration-150 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[5px_5px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[5px_5px_0_var(--color-ink)] disabled:cursor-default disabled:border-clay disabled:bg-clay disabled:shadow-none lg:mt-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           <span className="flex items-center gap-3">

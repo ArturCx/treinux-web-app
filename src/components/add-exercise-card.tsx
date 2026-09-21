@@ -113,7 +113,7 @@ export function AddExerciseCard({
             <SubmitButton />
           </form>
           <Link
-            href={`/exercicios/${exerciseId}`}
+            href={`/exercicios/${exerciseId}?ficha=${fichaId}&de=adicionar`}
             className="mt-2.5 block py-2 text-center text-[13px] font-medium text-muted underline underline-offset-3 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
           >
             Ver exercício

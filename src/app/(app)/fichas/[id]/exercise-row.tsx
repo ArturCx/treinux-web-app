@@ -60,11 +60,14 @@ export type RowItem = {
  */
 export function ExerciseRow({
   item,
+  fichaId,
   index,
   last,
   first,
 }: {
   item: RowItem;
+  /** ficha de origem — vai no link do exercício para o "voltar" retornar aqui */
+  fichaId: string;
   index: number;
   last: boolean;
   first: boolean;
@@ -140,7 +143,7 @@ export function ExerciseRow({
         <div className="min-w-0 flex-1">
           <h3 className="text-[19px] leading-[1.15] font-bold tracking-[-0.02em] lg:text-[21px]">
             <Link
-              href={`/exercicios/${item.exercise.id}`}
+              href={`/exercicios/${item.exercise.id}?ficha=${fichaId}`}
               className="hover:underline hover:decoration-ember hover:underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
               {displayName}

@@ -593,7 +593,7 @@ export function WorkoutSession({
       </div>
 
       {infoExercise && (
-        <ExerciseInfo exercise={infoExercise} onClose={() => setInfoId(null)} />
+        <ExerciseInfo exercise={infoExercise} logId={logId} onClose={() => setInfoId(null)} />
       )}
 
       <Dock logId={logId} sessionSeconds={sessionSeconds} />
@@ -604,9 +604,11 @@ export function WorkoutSession({
 /** Overlay "como fazer" — instruções do exercício sem sair do treino. */
 function ExerciseInfo({
   exercise,
+  logId,
   onClose,
 }: {
   exercise: ExerciseInput;
+  logId: string;
   onClose: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
@@ -687,7 +689,7 @@ function ExerciseInfo({
         </div>
 
         <Link
-          href={`/exercicios/${exercise.exerciseId}`}
+          href={`/exercicios/${exercise.exerciseId}?treino=${logId}`}
           className="mt-5 flex min-h-12 items-center justify-between border border-dgray px-4 font-mono text-[13px] font-bold text-dtext transition-colors hover:border-amber hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
         >
           Ver passo a passo
